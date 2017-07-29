@@ -31,26 +31,34 @@ public class PDFTextExtractor {
 		LOGGER.info("Extracting " + path);
 
 		try {
+			MetaData metaData = new MetaData();
+			metaData.setFilePath(path.toString());
+			metaData.setTitle(path.getFileName().toString());
+
+			Path metaDataPath = getMetaDataPath(path);
 			PDDocument doc = PDDocument.load(new FileInputStream(path.toFile()));
 			PDPageTree pages = doc.getPages();
 			AtomicInteger imgCount = new AtomicInteger(0);
+			AtomicInteger pageCount = new AtomicInteger(0);
 			pages.forEach(page -> {
-				LOGGER.info("Extracting " + path + " page: " + imgCount.get());
+				LOGGER.info("Extracting " + path + " page: " + pageCount.incrementAndGet());
 				PDResources resources = page.getResources();
 				resources.getXObjectNames().forEach(name -> {
 					PDXObject obj;
 					try {
 						obj = resources.getXObject(name);
 						if (obj instanceof PDImageXObject) {
+							String fileName = metaDataPath + "_" + imgCount.incrementAndGet() + ".png";
+							LOGGER.info("Writing image " + fileName);
 							RenderedImage image = (((PDImageXObject) obj).getImage());
-							getMetaDataPath(path).getParent().toFile().mkdirs();
-							String fileName = getMetaDataPath(path) + "_" + imgCount.incrementAndGet() + ".png";
+							metaDataPath.getParent().toFile().mkdirs();
 							File pageImageFile = new File(fileName);
 							ImageIO.write(image, "png", pageImageFile);
 							doOCR(pageImageFile.toPath());
 							createThumbnail(pageImageFile.toPath());
-
 							pageImageFile.delete();
+							metaData.getThumbnailPaths().add(Paths
+									.get(pageImageFile.getParent(), "thumb_" + pageImageFile.getName()).toString());
 						}
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -58,6 +66,8 @@ public class PDFTextExtractor {
 				});
 			});
 			doc.close();
+			LOGGER.info("Writing meta data");
+			metaData.saveToFile(Paths.get(metaDataPath + ".json"));
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
