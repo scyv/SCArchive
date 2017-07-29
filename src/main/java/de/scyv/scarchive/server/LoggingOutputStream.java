@@ -5,6 +5,9 @@ import java.io.OutputStream;
 
 import org.slf4j.Logger;
 
+/**
+ * Channels an output stream to a logger.
+ */
 public class LoggingOutputStream extends OutputStream {
 
 	public static enum LogLevel {

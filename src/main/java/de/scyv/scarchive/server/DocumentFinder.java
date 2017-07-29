@@ -14,22 +14,34 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+/**
+ * Service for finding documents by query.
+ */
 @Service
 public class DocumentFinder {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(DocumentFinder.class);
 
-	private Path documentPath = Paths.get("/Users/Y/sync/scans");
+	private final Path documentPath = Paths.get("/Users/Y/sync/scans");
 
+	/**
+	 * Find documents by a search string.
+	 *
+	 * When containing blank, the string is splitted and an OR search is done.
+	 *
+	 * @param searchString
+	 *            the search string.
+	 * @return list of findins. Empty list, if nothing could be found.
+	 */
 	public List<MetaData> find(String searchString) {
-		List<String> searchStrings = Arrays.asList(searchString.toLowerCase().split(" "));
+		final List<String> searchStrings = Arrays.asList(searchString.toLowerCase().split(" "));
 		LOGGER.info("Searching " + documentPath + "...");
 		final Map<String, MetaData> findings = new HashMap<>();
 		try {
 			Files.walk(documentPath).filter(this::isMetaDataDir).forEach(path -> {
 				findInMetaData(path, searchStrings, findings);
 			});
-		} catch (IOException e) {
+		} catch (final IOException e) {
 			e.printStackTrace();
 		}
 
@@ -44,7 +56,7 @@ public class DocumentFinder {
 					findInMetaDataFile(metaDataPath, searchStrings, findings);
 				}
 			});
-		} catch (IOException e) {
+		} catch (final IOException e) {
 			e.printStackTrace();
 		}
 	}
@@ -57,7 +69,7 @@ public class DocumentFinder {
 						findings.put(metaDataPath.toString(), createMetaData(metaDataPath));
 					}
 				});
-			} catch (IOException e) {
+			} catch (final IOException e) {
 				e.printStackTrace();
 			}
 		});
@@ -68,12 +80,12 @@ public class DocumentFinder {
 
 		MetaData metaData;
 
-		Path metaDataFile = Paths
+		final Path metaDataFile = Paths
 				.get(path.toString().replace("/.scarchive/", "/").replaceAll("_\\d+\\.png\\.txt$", ".json"));
 
 		try {
 			metaData = MetaData.createFromFile(metaDataFile);
-		} catch (IOException e) {
+		} catch (final IOException e) {
 			LOGGER.warn("Cannot open metaDataFile " + metaDataFile + ". Creating one for you...");
 			metaData = new MetaData();
 			metaData.setTitle(path.getFileName().toString());
@@ -84,7 +96,7 @@ public class DocumentFinder {
 							.toString());
 			try {
 				metaData.saveToFile(metaDataFile);
-			} catch (IOException ioe) {
+			} catch (final IOException ioe) {
 				ioe.printStackTrace();
 			}
 		}

@@ -5,10 +5,11 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.fasterxml.jackson.core.JsonGenerationException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+/**
+ * Representation of metadata of a document.
+ */
 public class MetaData {
 
 	private String filePath;
@@ -20,13 +21,30 @@ public class MetaData {
 
 	private List<String> tags = new ArrayList<>();
 
+	/**
+	 * Factory Method that creates a metaData instance from a given json file.
+	 *
+	 * @param metaDataFile
+	 *            the file to load.
+	 * @return Instance of the metaData
+	 * @throws IOException
+	 *             when the file cannot be read.
+	 */
 	public static MetaData createFromFile(Path metaDataFile) throws IOException {
-		ObjectMapper mapper = new ObjectMapper();
+		final ObjectMapper mapper = new ObjectMapper();
 		return mapper.readValue(metaDataFile.toFile(), MetaData.class);
 	}
 
-	public void saveToFile(Path metaDataFile) throws JsonGenerationException, JsonMappingException, IOException {
-		ObjectMapper mapper = new ObjectMapper();
+	/**
+	 * Save metaData to a json file.
+	 *
+	 * @param metaDataFile
+	 *            path where the data shall be stored.
+	 * @throws IOException
+	 *             when writing to the json file fails.
+	 */
+	public void saveToFile(Path metaDataFile) throws IOException {
+		final ObjectMapper mapper = new ObjectMapper();
 		mapper.writeValue(metaDataFile.toFile(), this);
 	}
 

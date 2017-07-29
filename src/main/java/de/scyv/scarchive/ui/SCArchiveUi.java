@@ -1,4 +1,4 @@
-package de.scyv.scarchive.server;
+package de.scyv.scarchive.ui;
 
 import java.io.File;
 import java.util.List;
@@ -20,6 +20,9 @@ import com.vaadin.ui.Panel;
 import com.vaadin.ui.TextField;
 import com.vaadin.ui.UI;
 import com.vaadin.ui.VerticalLayout;
+
+import de.scyv.scarchive.server.DocumentFinder;
+import de.scyv.scarchive.server.MetaData;
 
 @Theme("valo")
 @SpringUI(path = "")
@@ -49,6 +52,7 @@ public class SCArchiveUi extends UI {
 
 		// Panel searchResult = new Panel("Suchergebnis");
 		VerticalLayout searchResult = new VerticalLayout();
+		searchResult.setMargin(false);
 		searchResult.setVisible(false);
 
 		searchButton.addClickListener(event -> {
