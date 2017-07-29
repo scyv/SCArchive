@@ -3,6 +3,7 @@ package de.scyv.scarchive.server;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,6 +19,10 @@ public class MetaData {
 	private String text = "";
 
 	private String title;
+
+	private Date lastUpdateMetaData;
+
+	private Date lastUpdateFile;
 
 	private List<String> tags = new ArrayList<>();
 
@@ -86,6 +91,22 @@ public class MetaData {
 
 	public void setTags(List<String> tags) {
 		this.tags = tags;
+	}
+
+	public Date getLastUpdateMetaData() {
+		return lastUpdateMetaData;
+	}
+
+	public void setLastUpdateMetaData(Date lastUpdateMetaData) {
+		this.lastUpdateMetaData = lastUpdateMetaData;
+	}
+
+	public Date getLastUpdateFile() {
+		return lastUpdateFile;
+	}
+
+	public void setLastUpdateFile(Date lastUpdateFile) {
+		this.lastUpdateFile = lastUpdateFile;
 	}
 
 }

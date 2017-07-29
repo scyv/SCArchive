@@ -21,7 +21,8 @@ import com.vaadin.ui.TextField;
 import com.vaadin.ui.UI;
 import com.vaadin.ui.VerticalLayout;
 
-import de.scyv.scarchive.server.DocumentFinder;
+import de.scyv.scarchive.search.DocumentFinder;
+import de.scyv.scarchive.search.Finding;
 import de.scyv.scarchive.server.MetaData;
 
 @Theme("valo")
@@ -29,12 +30,18 @@ import de.scyv.scarchive.server.MetaData;
 public class SCArchiveUi extends UI {
 
 	/**
-	 * 
+	 *
 	 */
 	private static final long serialVersionUID = 1L;
 
 	@Autowired
 	private DocumentFinder finder;
+
+	private CssLayout searchForm;
+
+	private TextField searchField;
+
+	private VerticalLayout searchResult;
 
 	@Override
 	public void init(VaadinRequest request) {
@@ -42,33 +49,20 @@ public class SCArchiveUi extends UI {
 
 		Responsive.makeResponsive(this);
 
-		VerticalLayout content = new VerticalLayout();
+		final VerticalLayout content = new VerticalLayout();
 
-		CssLayout searchForm = new CssLayout();
-		final TextField searchField = new TextField();
+		searchForm = new CssLayout();
+		searchField = new TextField();
 		searchField.setPlaceholder("Suchbegriff");
-		Button searchButton = new Button("Suche");
+		final Button searchButton = new Button("Suche");
 		searchForm.addComponents(searchField, searchButton);
 
-		// Panel searchResult = new Panel("Suchergebnis");
-		VerticalLayout searchResult = new VerticalLayout();
+		searchResult = new VerticalLayout();
 		searchResult.setMargin(false);
 		searchResult.setVisible(false);
 
 		searchButton.addClickListener(event -> {
-			CssLayout searchResultList = new CssLayout();
-			// searchResult.setContent(searchResultList);
-			searchResult.removeAllComponents();
-			searchResult.addComponent(searchResultList);
-			List<MetaData> findings = finder.find(searchField.getValue());
-			findings.forEach(data -> {
-				searchResultList.addComponent(createResultComponent(data));
-			});
-			if (findings.size() == 0) {
-				searchResultList.addComponent(new Label("Nichts gefunden :("));
-			}
-
-			searchResult.setVisible(true);
+			runSearch(searchField.getValue());
 		});
 
 		content.addComponents(searchForm, searchResult);
@@ -76,14 +70,32 @@ public class SCArchiveUi extends UI {
 		setContent(content);
 	}
 
-	private Component createResultComponent(MetaData data) {
-		Panel result = new Panel();
-		HorizontalLayout row = new HorizontalLayout();
-		VerticalLayout info = new VerticalLayout();
+	private void runSearch(String searchString) {
+		final CssLayout searchResultList = new CssLayout();
+		searchResult.removeAllComponents();
+		searchResult.addComponent(searchResultList);
+		final List<Finding> findings = finder.find(searchField.getValue());
+		findings.forEach(finding -> {
+			searchResultList.addComponent(createResultComponent(finding));
+		});
+		if (findings.size() == 0) {
+			searchResultList.addComponent(new Label("Nichts gefunden :("));
+		}
 
+		searchResult.setVisible(true);
+	}
+
+	private Component createResultComponent(Finding finding) {
+		final MetaData data = finding.getMetaData();
+		final Panel result = new Panel(data.getTitle());
+		result.addClickListener(event -> {
+			getUI().addWindow(new EditMetaDataWindow(data));
+		});
+		final HorizontalLayout row = new HorizontalLayout();
+		final VerticalLayout info = new VerticalLayout();
 		row.addComponent(new Image(null, new FileResource(new File(data.getThumbnailPaths().get(0)))));
 		row.addComponent(info);
-		info.addComponent(new Label(data.getTitle()));
+		row.addComponent(new Label(finding.getContext()));
 		info.addComponent(new Label(String.join(", ", data.getTags())));
 		info.addComponent(new Label(data.getFilePath().toString()));
 		result.setContent(row);
