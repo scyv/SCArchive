@@ -44,7 +44,7 @@ public class DocumentFinder {
 			LOGGER.info("Searching " + documentPath + "...");
 			try {
 				Files.walk(Paths.get(documentPath)).filter(this::isMetaDataDir).forEach(path -> {
-					findInMetaData(path, searchStrings, findings);
+					find(path, searchStrings, findings);
 				});
 			} catch (final IOException ex) {
 				LOGGER.error("Cannot walk the path: " + documentPath, ex);
@@ -53,35 +53,61 @@ public class DocumentFinder {
 		return new ArrayList<>(findings.values());
 	}
 
-	private void findInMetaData(Path path, List<String> searchStrings, Map<String, Finding> findings) {
-		try {
-			Files.walk(path).filter(Files::isRegularFile).forEach(metaDataPath -> {
-				if (metaDataPath.toString().endsWith(".txt")) {
-					findInMetaDataFile(metaDataPath, searchStrings, findings);
-				}
-			});
-		} catch (final IOException ex) {
-			LOGGER.error("Cannot walk the path: " + path, ex);
-		}
-	}
-
-	private void findInMetaDataFile(Path metaDataPath, List<String> searchStrings, Map<String, Finding> findings) {
-		searchStrings.parallelStream().forEach(search -> {
+	private void find(Path path, List<String> searchStrings, Map<String, Finding> findings) {
+		searchStrings.parallelStream().forEach(searchString -> {
 			try {
-				Files.readAllLines(metaDataPath).parallelStream().forEach(line -> {
-					if (line.replaceAll("\\s", "").toLowerCase().contains(search)) {
-						LOGGER.debug("Found something in " + metaDataPath + ": " + line);
-						final Finding finding = new Finding();
-						finding.setMetaData(createMetaData(metaDataPath));
-						finding.setContext(line);
-						findings.put(metaDataPath.toString(), finding);
+				Files.walk(path).filter(Files::isRegularFile).forEach(metaDataPath -> {
+					if (metaDataPath.toString().endsWith(".txt")) {
+						findInTextDataFile(metaDataPath, searchString, findings);
+					} else if (metaDataPath.toString().endsWith(".json")) {
+						findInMetaData(metaDataPath, searchString, findings);
 					}
 				});
 			} catch (final IOException ex) {
-				LOGGER.error("Cannot walk the path: " + metaDataPath, ex);
+				LOGGER.error("Cannot walk the path: " + path, ex);
 			}
 		});
+	}
 
+	private void findInMetaData(Path metaDataPath, String searchString, Map<String, Finding> findings) {
+		try {
+			final MetaData metaData = MetaData.createFromFile(metaDataPath);
+			String context = "";
+			if (metaData.getFilePath().toLowerCase().contains(searchString)) {
+				context = metaData.getFilePath();
+			} else if (metaData.getText().toLowerCase().contains(searchString)) {
+				context = metaData.getText();
+			} else if (String.join(",", metaData.getTags()).toLowerCase().contains(searchString)) {
+				context = String.join(", ", metaData.getTags());
+			} else if (metaData.getTitle().toLowerCase().contains(searchString)) {
+				context = metaData.getTitle();
+			}
+
+			if (!context.isEmpty()) {
+				final Finding finding = new Finding();
+				finding.setMetaData(createMetaData(metaDataPath));
+				finding.setContext(context);
+				findings.put(metaData.getFilePath(), finding);
+			}
+		} catch (final IOException ex) {
+			LOGGER.error("Cannot read meta data file: " + metaDataPath, ex);
+		}
+	}
+
+	private void findInTextDataFile(Path metaDataPath, String searchString, Map<String, Finding> findings) {
+		try {
+			Files.readAllLines(metaDataPath).parallelStream().forEach(line -> {
+				if (line.replaceAll("\\s", "").toLowerCase().contains(searchString)) {
+					LOGGER.debug("Found something in " + metaDataPath + ": " + line);
+					final Finding finding = new Finding();
+					finding.setMetaData(createMetaData(metaDataPath));
+					finding.setContext(line);
+					findings.put(metaDataPath.toString(), finding);
+				}
+			});
+		} catch (final IOException ex) {
+			LOGGER.error("Cannot walk the path: " + metaDataPath, ex);
+		}
 	}
 
 	private MetaData createMetaData(Path path) {
