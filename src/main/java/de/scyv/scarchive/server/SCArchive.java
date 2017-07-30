@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import de.scyv.scarchive.server.extraction.Extractor;
+import de.scyv.scarchive.server.extraction.HTMLExtractor;
 import de.scyv.scarchive.server.extraction.PDFTextExtractor;
 
 /**
@@ -24,6 +25,9 @@ public class SCArchive {
 
     @Autowired
     private PDFTextExtractor pdfTextExtractor;
+
+    @Autowired
+    private HTMLExtractor htmlExtractor;
 
     /**
      * Create the service.
@@ -63,6 +67,9 @@ public class SCArchive {
                     if (pdfTextExtractor.accepts(path)) {
                         collection.add(pdfTextExtractor, path);
                     }
+                    if (htmlExtractor.accepts(path)) {
+                        collection.add(htmlExtractor, path);
+                    }
                 });
 
             } catch (final IOException ex) {
@@ -75,7 +82,7 @@ public class SCArchive {
         final AtomicInteger currentIdx = new AtomicInteger(0);
 
         runExtraction(collection, pdfTextExtractor, currentIdx);
-
+        runExtraction(collection, htmlExtractor, currentIdx);
     }
 
     private void runExtraction(ExtractionCollection collection, Extractor extractor, AtomicInteger currentIdx) {

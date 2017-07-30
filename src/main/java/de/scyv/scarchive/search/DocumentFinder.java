@@ -117,15 +117,22 @@ public class DocumentFinder {
     private void findInMetaData(Path metaDataPath, String searchString, Map<String, Finding> findings) {
         try {
             final MetaData metaData = MetaData.createFromFile(metaDataPath);
+
+            if (!Files.exists(Paths.get(metaData.getFilePath()))) {
+                Files.delete(metaDataPath);
+                return;
+            }
+
             String context = "";
-            if (metaData.getFilePath().toLowerCase().contains(searchString)) {
-                context = metaData.getFilePath();
-            } else if (metaData.getText().toLowerCase().contains(searchString)) {
-                context = metaData.getText();
+            if (metaData.getText().toLowerCase().contains(searchString)) {
+                final String text = metaData.getText();
+                context = text.length() > 400 ? text.substring(0, 400) : text;
             } else if (String.join(",", metaData.getTags()).toLowerCase().contains(searchString)) {
                 context = String.join(", ", metaData.getTags());
             } else if (metaData.getTitle().toLowerCase().contains(searchString)) {
                 context = metaData.getTitle();
+            } else if (metaData.getFilePath().toLowerCase().contains(searchString)) {
+                context = metaData.getFilePath();
             }
 
             if (!context.isEmpty()) {
@@ -134,6 +141,7 @@ public class DocumentFinder {
                 finding.setContext(context);
                 findings.put(metaData.getFilePath(), finding);
             }
+
         } catch (final IOException ex) {
             LOGGER.error("Cannot read meta data file: " + metaDataPath, ex);
         }
