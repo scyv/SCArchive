@@ -7,24 +7,24 @@ import de.scyv.scarchive.server.MetaData;
  */
 public class Finding {
 
-	private MetaData metaData;
+    private MetaData metaData;
 
-	private String context;
+    private String context;
 
-	public MetaData getMetaData() {
-		return metaData;
-	}
+    public MetaData getMetaData() {
+        return metaData;
+    }
 
-	public void setMetaData(MetaData metaData) {
-		this.metaData = metaData;
-	}
+    public void setMetaData(MetaData metaData) {
+        this.metaData = metaData;
+    }
 
-	public String getContext() {
-		return context;
-	}
+    public String getContext() {
+        return context;
+    }
 
-	public void setContext(String context) {
-		this.context = context;
-	}
+    public void setContext(String context) {
+        this.context = context;
+    }
 
 }

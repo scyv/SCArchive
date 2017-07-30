@@ -11,24 +11,24 @@ import org.slf4j.LoggerFactory;
  */
 public class TesseractRunner extends ProcessRunner {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(TesseractRunner.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(TesseractRunner.class);
 
-	/**
-	 * Create instance.
-	 *
-	 * @param filePath
-	 *            the path of the file to be processed by OCR
-	 * @param tesseractBin
-	 *            the binary of tesseract
-	 */
-	public TesseractRunner(Path filePath, String tesseractBin) {
-		setCommand(new String[] { tesseractBin, "-psm", "3", filePath.toString(), filePath.toString() });
-	}
+    /**
+     * Create instance.
+     *
+     * @param filePath
+     *            the path of the file to be processed by OCR
+     * @param tesseractBin
+     *            the binary of tesseract
+     */
+    public TesseractRunner(Path filePath, String tesseractBin) {
+        setCommand(new String[] { tesseractBin, "-psm", "3", filePath.toString(), filePath.toString() });
+    }
 
-	@Override
-	public int run() throws IOException, InterruptedException {
-		LOGGER.debug("Running tesseract with command: " + String.join(" ", command));
-		return super.run();
-	}
+    @Override
+    public int run() throws IOException, InterruptedException {
+        LOGGER.debug("Running tesseract with command: " + String.join(" ", command));
+        return super.run();
+    }
 
 }

@@ -1,15 +1,22 @@
 package de.scyv.scarchive.ui;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.vaadin.annotations.Theme;
+import com.vaadin.event.ShortcutAction.KeyCode;
+import com.vaadin.icons.VaadinIcons;
 import com.vaadin.server.FileResource;
 import com.vaadin.server.Responsive;
 import com.vaadin.server.VaadinRequest;
+import com.vaadin.shared.ui.ContentMode;
 import com.vaadin.spring.annotation.SpringUI;
+import com.vaadin.ui.Alignment;
 import com.vaadin.ui.Button;
 import com.vaadin.ui.Component;
 import com.vaadin.ui.CssLayout;
@@ -20,6 +27,7 @@ import com.vaadin.ui.Panel;
 import com.vaadin.ui.TextField;
 import com.vaadin.ui.UI;
 import com.vaadin.ui.VerticalLayout;
+import com.vaadin.ui.themes.ValoTheme;
 
 import de.scyv.scarchive.search.DocumentFinder;
 import de.scyv.scarchive.search.Finding;
@@ -29,78 +37,163 @@ import de.scyv.scarchive.server.MetaData;
 @SpringUI(path = "")
 public class SCArchiveUi extends UI {
 
-	/**
-	 *
-	 */
-	private static final long serialVersionUID = 1L;
+    private static final Logger LOGGER = LoggerFactory.getLogger(SCArchiveUi.class);
 
-	@Autowired
-	private DocumentFinder finder;
+    /**
+     *
+     */
+    private static final long serialVersionUID = 1L;
 
-	private CssLayout searchForm;
+    @Autowired
+    private DocumentFinder finder;
 
-	private TextField searchField;
+    private CssLayout searchForm;
 
-	private VerticalLayout searchResult;
+    private TextField searchField;
 
-	@Override
-	public void init(VaadinRequest request) {
-		getPage().setTitle("SCArchive");
+    private VerticalLayout searchResult;
 
-		Responsive.makeResponsive(this);
+    private Label searchResultCountLabel;
 
-		final VerticalLayout content = new VerticalLayout();
+    @Override
+    public void init(VaadinRequest request) {
+        getPage().setTitle("SCArchive");
 
-		searchForm = new CssLayout();
-		searchField = new TextField();
-		searchField.setPlaceholder("Suchbegriff");
-		final Button searchButton = new Button("Suche");
-		searchForm.addComponents(searchField, searchButton);
+        Responsive.makeResponsive(this);
 
-		searchResult = new VerticalLayout();
-		searchResult.setMargin(false);
-		searchResult.setVisible(false);
+        final VerticalLayout content = new VerticalLayout();
 
-		searchButton.addClickListener(event -> {
-			runSearch(searchField.getValue());
-		});
+        final HorizontalLayout searchBar = new HorizontalLayout();
+        searchBar.setSizeFull();
+        searchForm = new CssLayout();
+        searchForm.setSizeFull();
+        searchForm.addStyleName(ValoTheme.LAYOUT_COMPONENT_GROUP);
+        searchBar.addComponent(searchForm);
+        searchField = new TextField();
+        searchField.setWidth(50f, Unit.PERCENTAGE);
+        searchField.setPlaceholder("Suchbegriff");
+        final Button searchButton = new Button("Suche");
 
-		content.addComponents(searchForm, searchResult);
+        searchResultCountLabel = new Label("");
+        searchResultCountLabel.addStyleName(ValoTheme.LABEL_SMALL);
 
-		setContent(content);
-	}
+        searchForm.addComponents(searchField, searchButton);
 
-	private void runSearch(String searchString) {
-		final CssLayout searchResultList = new CssLayout();
-		searchResult.removeAllComponents();
-		searchResult.addComponent(searchResultList);
-		final List<Finding> findings = finder.find(searchField.getValue());
-		findings.forEach(finding -> {
-			searchResultList.addComponent(createResultComponent(finding));
-		});
-		if (findings.size() == 0) {
-			searchResultList.addComponent(new Label("Nichts gefunden :("));
-		}
+        searchBar.addComponent(searchResultCountLabel);
+        searchBar.setComponentAlignment(searchResultCountLabel, Alignment.MIDDLE_RIGHT);
+        searchBar.setExpandRatio(searchForm, 8);
+        searchBar.setExpandRatio(searchResultCountLabel, 2);
+        searchResult = new VerticalLayout();
+        searchResult.setMargin(false);
 
-		searchResult.setVisible(true);
-	}
+        searchButton.setClickShortcut(KeyCode.ENTER);
+        searchButton.addClickListener(event -> {
+            searchButton.setEnabled(false);
+            runSearch(searchField.getValue());
+            searchButton.setEnabled(true);
+        });
 
-	private Component createResultComponent(Finding finding) {
-		final MetaData data = finding.getMetaData();
-		final Panel result = new Panel(data.getTitle());
-		result.addClickListener(event -> {
-			getUI().addWindow(new EditMetaDataWindow(data));
-		});
-		final HorizontalLayout row = new HorizontalLayout();
-		final VerticalLayout info = new VerticalLayout();
-		row.addComponent(new Image(null, new FileResource(new File(data.getThumbnailPaths().get(0)))));
-		row.addComponent(info);
-		row.addComponent(new Label(finding.getContext()));
-		info.addComponent(new Label(String.join(", ", data.getTags())));
-		info.addComponent(new Label(data.getFilePath().toString()));
-		result.setContent(row);
-		return result;
+        content.addComponents(searchBar, searchResult);
 
-	}
+        setContent(content);
+
+        findNewestEntries();
+
+    }
+
+    private void runSearch(String searchString) {
+        if (searchString.trim().isEmpty()) {
+            return;
+        }
+        searchResult.removeAllComponents();
+        final List<Finding> findings = finder.find(searchField.getValue());
+        findings.forEach(finding -> {
+            searchResult.addComponent(createResultComponent(finding));
+        });
+        if (findings.size() == 0) {
+            searchResult.addComponent(new Label("Nichts gefunden :("));
+        }
+
+        updateSearchResultCount(findings.size());
+
+    }
+
+    private void updateSearchResultCount(int results) {
+        searchResultCountLabel.setValue(results + " Ergebnisse.");
+    }
+
+    private void findNewestEntries() {
+        searchResult.removeAllComponents();
+        final List<Finding> findings = finder.findNewest();
+        findings.forEach(finding -> {
+            searchResult.addComponent(createResultComponent(finding));
+        });
+        updateSearchResultCount(findings.size());
+    }
+
+    private Component createResultComponent(Finding finding) {
+        final MetaData data = finding.getMetaData();
+        final Panel result = new Panel();
+        result.setResponsive(true);
+        final HorizontalLayout row = new HorizontalLayout();
+        final VerticalLayout info = new VerticalLayout();
+        Image image = null;
+        if (data.getThumbnailPaths().size() > 0) {
+            final File imageFile = new File(data.getThumbnailPaths().get(0));
+            if (imageFile.exists()) {
+                image = new Image(null, new FileResource(imageFile));
+                image.setWidth(180, Unit.PIXELS);
+            }
+        }
+        final Label contextLabel = new Label(finding.getContext());
+        contextLabel.setContentMode(ContentMode.HTML);
+        contextLabel.setWidth(60f, Unit.PERCENTAGE);
+        final Label tagLabel = new Label();
+
+        final CssLayout buttons = new CssLayout();
+        buttons.addStyleName(ValoTheme.LAYOUT_COMPONENT_GROUP);
+        final Button editButton = new Button("Bearbeiten");
+        editButton.addStyleNames(ValoTheme.BUTTON_FRIENDLY, ValoTheme.BUTTON_SMALL);
+        editButton.setIcon(VaadinIcons.PENCIL);
+        final Button openButton = new Button("Öffnen");
+        openButton.addStyleNames(ValoTheme.BUTTON_SMALL);
+        openButton.setIcon(VaadinIcons.DOWNLOAD);
+        buttons.addComponents(editButton, openButton);
+
+        info.addComponent(buttons);
+        if (image != null) {
+            info.addComponent(image);
+        }
+        info.addComponent(tagLabel);
+        row.addComponent(info);
+        row.addComponent(contextLabel);
+        result.setContent(row);
+
+        row.setMargin(true);
+        info.setMargin(false);
+
+        editButton.addClickListener(event -> {
+            getUI().addWindow(new EditMetaDataWindow(data, metaData -> {
+                metaDataToUI(metaData, finding, result, tagLabel, contextLabel);
+            }));
+        });
+
+        openButton.addClickListener(event -> {
+            try {
+                Runtime.getRuntime().exec("open " + data.getFilePath());
+            } catch (final IOException ex) {
+                LOGGER.error("Cannot open " + data.getFilePath(), ex);
+            }
+        });
+
+        metaDataToUI(data, finding, result, tagLabel, contextLabel);
+        return result;
+    }
+
+    private void metaDataToUI(MetaData metaData, Finding finding, Panel panel, Label tagLabel, Label contextLabel) {
+        panel.setCaption(metaData.getTitle());
+        tagLabel.setValue(String.join(", ", metaData.getTags()));
+        contextLabel.setValue(finding.getContext());
+    }
 
 }
