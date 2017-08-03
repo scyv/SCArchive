@@ -2,7 +2,8 @@ package de.scyv.scarchive.ui;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
+import java.text.SimpleDateFormat;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,9 +40,6 @@ public class SCArchiveUi extends UI {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SCArchiveUi.class);
 
-    /**
-     *
-     */
     private static final long serialVersionUID = 1L;
 
     @Autowired
@@ -105,8 +103,9 @@ public class SCArchiveUi extends UI {
         if (searchString.trim().isEmpty()) {
             return;
         }
+        searchResultCountLabel.setValue("...");
         searchResult.removeAllComponents();
-        final List<Finding> findings = finder.find(searchField.getValue());
+        final Set<Finding> findings = finder.find(searchField.getValue());
         findings.forEach(finding -> {
             searchResult.addComponent(createResultComponent(finding));
         });
@@ -123,8 +122,9 @@ public class SCArchiveUi extends UI {
     }
 
     private void findNewestEntries() {
+        searchResultCountLabel.setValue("...");
         searchResult.removeAllComponents();
-        final List<Finding> findings = finder.findNewest();
+        final Set<Finding> findings = finder.findNewest();
         findings.forEach(finding -> {
             searchResult.addComponent(createResultComponent(finding));
         });
@@ -146,7 +146,7 @@ public class SCArchiveUi extends UI {
             }
         }
         final Label contextLabel = new Label(finding.getContext());
-        contextLabel.setContentMode(ContentMode.HTML);
+        contextLabel.setContentMode(ContentMode.TEXT);
         contextLabel.setWidth(60f, Unit.PERCENTAGE);
         final Label tagLabel = new Label();
 
@@ -191,7 +191,9 @@ public class SCArchiveUi extends UI {
     }
 
     private void metaDataToUI(MetaData metaData, Finding finding, Panel panel, Label tagLabel, Label contextLabel) {
-        panel.setCaption(metaData.getTitle());
+        final SimpleDateFormat sdf = new SimpleDateFormat();
+
+        panel.setCaption(sdf.format(metaData.getLastUpdateMetaData()) + " - " + metaData.getTitle());
         tagLabel.setValue(String.join(", ", metaData.getTags()));
         contextLabel.setValue(finding.getContext());
     }

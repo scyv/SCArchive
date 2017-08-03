@@ -36,6 +36,6 @@ public class Scheduler {
         final Runnable runnable = () -> runner.forEach(Runnable::run);
 
         final ScheduledExecutorService es = Executors.newScheduledThreadPool(1);
-        es.scheduleWithFixedDelay(runnable, 1, 10, TimeUnit.SECONDS);
+        es.scheduleWithFixedDelay(runnable, 1, 5, TimeUnit.MINUTES);
     }
 }

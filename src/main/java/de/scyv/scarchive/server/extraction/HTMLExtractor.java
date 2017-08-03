@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Date;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,18 +25,23 @@ public class HTMLExtractor implements Extractor {
     @Override
     public void extract(Path path) {
 
+        final Path metaDataPath = getMetaDataPath(path);
+        if (Files.exists(metaDataPath)) {
+            return;
+        }
+
         LOGGER.info("Extracting " + path);
 
         final MetaData metaData = new MetaData();
         metaData.setFilePath(path.toString());
         metaData.setTitle(path.getFileName().toString());
-        final Path metaDataPath = getMetaDataPath(path);
         if (Files.exists(metaDataPath)) {
             return;
         }
         metaDataPath.getParent().toFile().mkdirs();
         try {
             metaData.setText(new String(Files.readAllBytes(path), "UTF-8"));
+            metaData.setLastUpdateFile(new Date(Files.getLastModifiedTime(path).toMillis()));
             metaData.saveToFile(metaDataPath);
         } catch (final IOException ex) {
             LOGGER.error("Could not extract " + path, ex);

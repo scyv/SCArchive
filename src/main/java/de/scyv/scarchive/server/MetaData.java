@@ -50,6 +50,7 @@ public class MetaData {
      */
     public void saveToFile(Path metaDataFile) throws IOException {
         final ObjectMapper mapper = new ObjectMapper();
+        this.setLastUpdateMetaData(new Date());
         mapper.writeValue(metaDataFile.toFile(), this);
     }
 

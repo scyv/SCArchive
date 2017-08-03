@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Date;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.imageio.ImageIO;
@@ -85,22 +86,22 @@ public class PDFTextExtractor implements Extractor {
             final Path metaDataPath = getMetaDataPath(path);
             metaDataPath.getParent().toFile().mkdirs();
 
-            final PDDocument doc = PDDocument.load(new FileInputStream(path.toFile()));
-
-            final PDFTextStripper stripper = new PDFTextStripper();
-            final String text = stripper.getText(doc);
-            if (text.trim().isEmpty()) {
-                // if we cannot find any text, do ocr over every page
-                iteratePages(doc.getPages(), metaDataPath, metaData);
-            } else {
-                Files.write(getTextDataFile(path), text.getBytes("UTF-8"));
-                // TODO create thumbnail from first page
+            try (PDDocument doc = PDDocument.load(new FileInputStream(path.toFile()))) {
+                final PDFTextStripper stripper = new PDFTextStripper();
+                final String text = stripper.getText(doc);
+                if (text.trim().isEmpty()) {
+                    // if we cannot find any text, do ocr over every page
+                    iteratePages(doc.getPages(), metaDataPath, metaData);
+                } else {
+                    Files.write(getTextDataFile(path), text.getBytes("UTF-8"));
+                    // TODO create thumbnail from first page
+                }
             }
-
-            doc.close();
             LOGGER.info("Writing meta data...");
+            metaData.setLastUpdateFile(new Date(Files.getLastModifiedTime(path).toMillis()));
             metaData.saveToFile(Paths.get(metaDataPath + ".json"));
         } catch (final Exception ex) {
+
             LOGGER.error("Could not extract file " + path, ex);
         }
 
@@ -143,7 +144,7 @@ public class PDFTextExtractor implements Extractor {
     }
 
     private boolean isAlreadyExtracted(Path path) {
-        return getTextDataFile(path).toFile().exists();
+        return Files.exists(getMetaDataPath(Paths.get(path.toString() + ".json")));
     }
 
     /**

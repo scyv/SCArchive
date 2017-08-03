@@ -1,16 +1,19 @@
 package de.scyv.scarchive.search;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +42,7 @@ public class DocumentFinder {
      *            the search string.
      * @return list of findins. Empty list, if nothing could be found.
      */
-    public List<Finding> find(String searchString) {
+    public Set<Finding> find(String searchString) {
         final List<String> searchStrings = Arrays.asList(searchString.toLowerCase().split(" "));
         final Map<String, Finding> findings = new HashMap<>();
         Arrays.asList(documentPaths.split(";")).parallelStream().forEach(documentPath -> {
@@ -52,10 +55,12 @@ public class DocumentFinder {
                 LOGGER.error("Cannot walk the path: " + documentPath, ex);
             }
         });
-        return Collections.unmodifiableList(new ArrayList<>(findings.values()));
+        final TreeSet<Finding> sortedFindings = new TreeSet<>(new Finding.LatestUpdateComparator());
+        sortedFindings.addAll(findings.values());
+        return Collections.unmodifiableSortedSet(sortedFindings);
     }
 
-    public List<Finding> findNewest() {
+    public Set<Finding> findNewest() {
 
         final Map<String, Finding> findings = new HashMap<>();
         final Calendar cal = Calendar.getInstance();
@@ -70,8 +75,9 @@ public class DocumentFinder {
                 LOGGER.error("Cannot walk the path: " + documentPath, ex);
             }
         });
-        return Collections.unmodifiableList(new ArrayList<>(findings.values()));
-
+        final TreeSet<Finding> sortedFindings = new TreeSet<>(new Finding.LatestUpdateComparator());
+        sortedFindings.addAll(findings.values());
+        return Collections.unmodifiableSortedSet(sortedFindings);
     }
 
     private void findByCalendar(Path path, Calendar cal, Map<String, Finding> findings) {
@@ -116,7 +122,7 @@ public class DocumentFinder {
 
     private void findInMetaData(Path metaDataPath, String searchString, Map<String, Finding> findings) {
         try {
-            final MetaData metaData = MetaData.createFromFile(metaDataPath);
+            final MetaData metaData = createMetaData(metaDataPath);
 
             if (!Files.exists(Paths.get(metaData.getFilePath()))) {
                 Files.delete(metaDataPath);
@@ -173,11 +179,18 @@ public class DocumentFinder {
 
         try {
             metaData = MetaData.createFromFile(metaDataFile);
+            if (metaData.getLastUpdateMetaData() == null) {
+                metaData.setLastUpdateMetaData(new Date(Files.getLastModifiedTime(metaDataFile).toMillis()));
+            }
+            if (metaData.getLastUpdateFile() == null) {
+                metaData.setLastUpdateFile(new Date(new File(metaData.getFilePath()).lastModified()));
+            }
         } catch (final IOException e) {
             LOGGER.warn("Cannot open metaDataFile " + metaDataFile + ". Creating one for you...");
             metaData = new MetaData();
             metaData.setTitle(path.getFileName().toString());
             metaData.setFilePath(path.toString().replace("/.scarchive/", "/").replaceAll("_\\d+\\.png\\.txt$", ""));
+            metaData.setLastUpdateFile(new Date(new File(metaData.getFilePath()).lastModified()));
             metaData.getThumbnailPaths()
                     .add(Paths
                             .get(path.getParent().toString(), ("thumb_" + path.getFileName()).replaceAll("\\.txt$", ""))
