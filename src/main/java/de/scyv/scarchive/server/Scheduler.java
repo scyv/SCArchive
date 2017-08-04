@@ -8,6 +8,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.annotation.PostConstruct;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 /**
@@ -17,6 +18,9 @@ import org.springframework.stereotype.Service;
 public class Scheduler {
 
     private final List<Runnable> runner = new ArrayList<>();
+
+    @Value("${scarchive.scheduler.pollingInterval}")
+    private String pollingIntervall;
 
     /**
      * Add a runnable to the list.
@@ -36,6 +40,6 @@ public class Scheduler {
         final Runnable runnable = () -> runner.forEach(Runnable::run);
 
         final ScheduledExecutorService es = Executors.newScheduledThreadPool(1);
-        es.scheduleWithFixedDelay(runnable, 1, 5, TimeUnit.MINUTES);
+        es.scheduleWithFixedDelay(runnable, 1, Integer.parseInt(pollingIntervall), TimeUnit.MINUTES);
     }
 }
