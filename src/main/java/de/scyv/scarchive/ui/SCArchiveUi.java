@@ -8,10 +8,12 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 
 import com.vaadin.annotations.Theme;
 import com.vaadin.event.ShortcutAction.KeyCode;
 import com.vaadin.icons.VaadinIcons;
+import com.vaadin.server.FileDownloader;
 import com.vaadin.server.FileResource;
 import com.vaadin.server.Responsive;
 import com.vaadin.server.VaadinRequest;
@@ -41,6 +43,9 @@ public class SCArchiveUi extends UI {
     private static final Logger LOGGER = LoggerFactory.getLogger(SCArchiveUi.class);
 
     private static final long serialVersionUID = 1L;
+
+    @Value("${scarchive.openlocal}")
+    private Boolean openlocal;
 
     @Autowired
     private DocumentFinder finder;
@@ -155,9 +160,8 @@ public class SCArchiveUi extends UI {
         final Button editButton = new Button("Bearbeiten");
         editButton.addStyleNames(ValoTheme.BUTTON_FRIENDLY, ValoTheme.BUTTON_SMALL);
         editButton.setIcon(VaadinIcons.PENCIL);
-        final Button openButton = new Button("Öffnen");
-        openButton.addStyleNames(ValoTheme.BUTTON_SMALL);
-        openButton.setIcon(VaadinIcons.DOWNLOAD);
+        final Button openButton = createOpenButton(data);
+
         buttons.addComponents(editButton, openButton);
 
         info.addComponent(buttons);
@@ -178,16 +182,27 @@ public class SCArchiveUi extends UI {
             }));
         });
 
-        openButton.addClickListener(event -> {
-            try {
-                Runtime.getRuntime().exec("open " + data.getFilePath());
-            } catch (final IOException ex) {
-                LOGGER.error("Cannot open " + data.getFilePath(), ex);
-            }
-        });
-
         metaDataToUI(data, finding, result, tagLabel, contextLabel);
         return result;
+    }
+
+    private Button createOpenButton(MetaData data) {
+        final Button openButton = new Button("Öffnen");
+        openButton.addStyleNames(ValoTheme.BUTTON_SMALL);
+        openButton.setIcon(VaadinIcons.DOWNLOAD);
+        if (openlocal) {
+            openButton.addClickListener(event -> {
+                try {
+                    Runtime.getRuntime().exec("open " + data.getFilePath());
+                } catch (final IOException ex) {
+                    LOGGER.error("Cannot open " + data.getFilePath(), ex);
+                }
+            });
+        } else {
+            final FileDownloader downloader = new FileDownloader(new FileResource(new File(data.getFilePath())));
+            downloader.extend(openButton);
+        }
+        return openButton;
     }
 
     private void metaDataToUI(MetaData metaData, Finding finding, Panel panel, Label tagLabel, Label contextLabel) {

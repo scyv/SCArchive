@@ -23,6 +23,9 @@ public class SCArchive {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SCArchive.class);
 
+    @Value("${scarchive.enablescan}")
+    private Boolean enableScan;
+
     @Autowired
     private PDFTextExtractor pdfTextExtractor;
 
@@ -41,11 +44,12 @@ public class SCArchive {
     public SCArchive(Scheduler scheduler, @Value("${scarchive.documentpaths}") String documentPaths) {
 
         scheduler.addRunner(() -> {
-            final ExtractionCollection collection = new ExtractionCollection();
-            collectFiles(documentPaths, collection);
-            LOGGER.info("Found " + collection.size() + " files in the archive.");
-            runExtraction(collection);
-
+            if (enableScan) {
+                final ExtractionCollection collection = new ExtractionCollection();
+                collectFiles(documentPaths, collection);
+                LOGGER.info("Found " + collection.size() + " files in the archive.");
+                runExtraction(collection);
+            }
         });
 
     }

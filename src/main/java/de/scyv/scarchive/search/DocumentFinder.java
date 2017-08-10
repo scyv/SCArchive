@@ -30,6 +30,9 @@ public class DocumentFinder {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DocumentFinder.class);
 
+    @Value("${scarchive.maxfindings}")
+    private Integer maxfindings;
+
     @Value("${scarchive.documentpaths}")
     private String documentPaths;
 
@@ -64,7 +67,7 @@ public class DocumentFinder {
 
         final Map<String, Finding> findings = new HashMap<>();
         final Calendar cal = Calendar.getInstance();
-        cal.add(Calendar.DAY_OF_WEEK_IN_MONTH, -2);
+        cal.add(Calendar.DAY_OF_MONTH, -2);
         Arrays.asList(documentPaths.split(";")).parallelStream().forEach(documentPath -> {
             LOGGER.info("Searching " + documentPath + "...");
             try {
@@ -92,6 +95,9 @@ public class DocumentFinder {
                 }
                 return false;
             }).forEach(metaDataPath -> {
+                if (findings.size() >= maxfindings) {
+                    return;
+                }
                 final Finding finding = new Finding();
                 final MetaData metaData = createMetaData(metaDataPath);
                 finding.setMetaData(metaData);
@@ -108,6 +114,9 @@ public class DocumentFinder {
         searchStrings.parallelStream().forEach(searchString -> {
             try {
                 Files.walk(path).filter(Files::isRegularFile).forEach(metaDataPath -> {
+                    if (findings.size() >= maxfindings) {
+                        return;
+                    }
                     if (metaDataPath.toString().endsWith(".txt")) {
                         findInTextDataFile(metaDataPath, searchString, findings);
                     } else if (metaDataPath.toString().endsWith(".json")) {
@@ -121,6 +130,10 @@ public class DocumentFinder {
     }
 
     private void findInMetaData(Path metaDataPath, String searchString, Map<String, Finding> findings) {
+        if (findings.size() >= maxfindings) {
+            return;
+        }
+
         try {
             final MetaData metaData = createMetaData(metaDataPath);
 
