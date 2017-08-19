@@ -60,7 +60,7 @@ public class SCArchiveUi extends UI {
 
     private Label searchResultCountLabel;
 
-    private CssLayout documentDetail;
+    private VerticalLayout documentDetail;
 
     private final MetaDataService metaDataService;
 
@@ -73,13 +73,15 @@ public class SCArchiveUi extends UI {
         getPage().setTitle("SCArchive");
 
         Responsive.makeResponsive(this);
+        this.setSizeFull();
 
         final VerticalLayout content = new VerticalLayout();
+        content.setSizeFull();
 
         final HorizontalLayout searchBar = new HorizontalLayout();
-        searchBar.setSizeFull();
+        searchBar.setWidth("100%");
         searchForm = new CssLayout();
-        searchForm.setSizeFull();
+        searchForm.setWidth("100%");
         searchForm.addStyleName(ValoTheme.LAYOUT_COMPONENT_GROUP);
         searchBar.addComponent(searchForm);
         searchField = new TextField();
@@ -108,12 +110,15 @@ public class SCArchiveUi extends UI {
         searchResult.setMargin(false);
         searchResult.setSizeFull();
 
-        documentDetail = new CssLayout();
+        documentDetail = new VerticalLayout();
+        documentDetail.setSizeFull();
 
         final HorizontalSplitPanel documentContent = new HorizontalSplitPanel(searchResult, documentDetail);
         documentContent.setSizeFull();
 
         content.addComponents(searchBar, documentContent);
+        content.setExpandRatio(searchBar, 1);
+        content.setExpandRatio(documentContent, 9);
 
         setContent(content);
 
@@ -162,14 +167,12 @@ public class SCArchiveUi extends UI {
 
     private void updateDetailComponent(Finding finding) {
         documentDetail.removeAllComponents();
-        documentDetail.addComponent(createDetailComponent(finding));
+        createDetailComponent(finding);
     }
 
-    private Component createDetailComponent(Finding finding) {
+    private void createDetailComponent(Finding finding) {
         final MetaData data = finding.getMetaData();
 
-        final VerticalLayout detail = new VerticalLayout();
-        detail.setSizeFull();
         final CssLayout buttons = new CssLayout();
         buttons.addStyleName(ValoTheme.LAYOUT_COMPONENT_GROUP);
         final Button editButton = new Button("Bearbeiten");
@@ -179,12 +182,12 @@ public class SCArchiveUi extends UI {
 
         buttons.addComponents(editButton, openButton);
 
-        detail.addComponent(buttons);
+        documentDetail.addComponent(buttons);
 
         final BrowserFrame bf = new BrowserFrame();
         bf.setSource(new FileResource(metaDataService.getOriginalFilePath(data).toFile()));
         bf.setSizeFull();
-        detail.addComponent(bf);
+        documentDetail.addComponent(bf);
 
         editButton.addClickListener(event -> {
             getUI().addWindow(new EditMetaDataWindow(data, metaData -> {
@@ -192,7 +195,6 @@ public class SCArchiveUi extends UI {
             }));
         });
 
-        return detail;
     }
 
     private Component createResultComponent(Finding finding) {

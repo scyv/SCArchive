@@ -198,7 +198,7 @@ public class DocumentFinder {
 
         MetaData metaData;
 
-        final Path metaDataFile = Paths.get(path.toString().replaceAll("_\\d+\\.png\\.txt$", ".json"));
+        final Path metaDataFile = Paths.get(path.toString().replaceAll("_\\d+\\.png\\.txt$", ".meta.json"));
 
         try {
             metaData = MetaData.createFromFile(metaDataFile);

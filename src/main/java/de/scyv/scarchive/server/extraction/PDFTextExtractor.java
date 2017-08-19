@@ -81,6 +81,7 @@ public class PDFTextExtractor implements Extractor {
         try {
             final MetaData metaData = new MetaData();
             metaData.setTitle(path.getFileName().toString());
+            metaData.setFilePath(path);
 
             final Path metaDataPath = metaDataService.getMetaDataPathPrefix(path);
             metaDataPath.getParent().toFile().mkdirs();

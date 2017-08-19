@@ -2,7 +2,10 @@ package de.scyv.scarchive.server;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
@@ -34,6 +37,9 @@ public class SCArchive {
 
     @Autowired
     private HTMLExtractor htmlExtractor;
+
+    @Autowired
+    private MetaDataService metaDataService;
 
     /**
      * Create the service.
@@ -90,9 +96,18 @@ public class SCArchive {
     }
 
     private void runExtraction(ExtractionCollection collection, Extractor extractor, AtomicInteger currentIdx) {
-        LOGGER.info("Running extraction for " + extractor.getIdentifier() + ", " + collection.size(extractor)
-                + " items...");
-        collection.get(extractor).forEach(path -> {
+        final List<Path> toExtract = new ArrayList<>();
+        collection.get(extractor).parallelStream().filter(path -> !metaDataService.isAlreadyExtracted(path))
+                .forEach(path -> {
+                    toExtract.add(path);
+                });
+
+        LOGGER.info("Running extraction for " + extractor.getIdentifier() + ": " + toExtract.size() + " items...");
+        final AtomicInteger currentCount = new AtomicInteger(0);
+        toExtract.stream().forEach(path -> {
+            LOGGER.info(extractor.getIdentifier() + ": "
+                    + String.format("%.0f%% (%d/%d)", (double) currentCount.get() * 100 / toExtract.size(),
+                            currentCount.getAndIncrement(), toExtract.size()));
             extractor.extract(path);
         });
     }
