@@ -37,12 +37,10 @@ import de.scyv.scarchive.server.MetaData;
  */
 public class EditMetaDataWindow extends Window {
 
+    private static final long serialVersionUID = 1L;
+
     private static Logger LOGGER = LoggerFactory.getLogger(EditMetaDataWindow.class);
 
-    /**
-     *
-     */
-    private static final long serialVersionUID = 1L;
     private final MetaData metaData;
     private TextField title;
     private TextField tags;
@@ -104,7 +102,7 @@ public class EditMetaDataWindow extends Window {
         saveButton.addClickListener(event -> {
             try {
                 binder.writeBean(metaData);
-                final Path path = Paths.get(metaData.getFilePath());
+                final Path path = metaData.getFilePath();
                 final Path metaDataPath = Paths.get(path.getParent().toString(), ".scarchive",
                         path.getFileName().toString() + ".json");
                 try {

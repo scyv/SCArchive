@@ -24,7 +24,8 @@ public class Finding {
             int compared = o2.getMetaData().getLastUpdateMetaData().compareTo(o1.getMetaData().getLastUpdateMetaData());
 
             if (compared == 0) {
-                compared = o1.getMetaData().getFilePath().compareToIgnoreCase(o2.getMetaData().getFilePath());
+                compared = o1.getMetaData().getFilePath().toString()
+                        .compareToIgnoreCase(o2.getMetaData().getFilePath().toString());
             }
             return compared;
         }

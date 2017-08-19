@@ -23,7 +23,7 @@ Tool for archiving documents and pictures
     * GraphicsMagick (http://www.graphicsmagick.org/download.html)
     * Much RAM and CPU capacity (for OCR)
 1. Currently only from source is possible
-    * Clone this repository git clone git@github.com:scyv/SCArchive.git
+    * Clone this repository `git clone git@github.com:scyv/SCArchive.git`
     * Run `mvnw package`
     * Navigate to ./target: `cd target`
     * Copy application.properties from `src/main/resources`: `cp src/main/resources/application.properties .`

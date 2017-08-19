@@ -17,13 +17,14 @@ import com.vaadin.server.FileDownloader;
 import com.vaadin.server.FileResource;
 import com.vaadin.server.Responsive;
 import com.vaadin.server.VaadinRequest;
-import com.vaadin.shared.ui.ContentMode;
 import com.vaadin.spring.annotation.SpringUI;
 import com.vaadin.ui.Alignment;
+import com.vaadin.ui.BrowserFrame;
 import com.vaadin.ui.Button;
 import com.vaadin.ui.Component;
 import com.vaadin.ui.CssLayout;
 import com.vaadin.ui.HorizontalLayout;
+import com.vaadin.ui.HorizontalSplitPanel;
 import com.vaadin.ui.Image;
 import com.vaadin.ui.Label;
 import com.vaadin.ui.Panel;
@@ -35,6 +36,7 @@ import com.vaadin.ui.themes.ValoTheme;
 import de.scyv.scarchive.search.DocumentFinder;
 import de.scyv.scarchive.search.Finding;
 import de.scyv.scarchive.server.MetaData;
+import de.scyv.scarchive.server.MetaDataService;
 
 @Theme("valo")
 @SpringUI(path = "")
@@ -57,6 +59,14 @@ public class SCArchiveUi extends UI {
     private VerticalLayout searchResult;
 
     private Label searchResultCountLabel;
+
+    private CssLayout documentDetail;
+
+    private final MetaDataService metaDataService;
+
+    public SCArchiveUi(MetaDataService metaDataService) {
+        this.metaDataService = metaDataService;
+    }
 
     @Override
     public void init(VaadinRequest request) {
@@ -86,8 +96,6 @@ public class SCArchiveUi extends UI {
         searchBar.setComponentAlignment(searchResultCountLabel, Alignment.MIDDLE_RIGHT);
         searchBar.setExpandRatio(searchForm, 8);
         searchBar.setExpandRatio(searchResultCountLabel, 2);
-        searchResult = new VerticalLayout();
-        searchResult.setMargin(false);
 
         searchButton.setClickShortcut(KeyCode.ENTER);
         searchButton.addClickListener(event -> {
@@ -96,7 +104,16 @@ public class SCArchiveUi extends UI {
             searchButton.setEnabled(true);
         });
 
-        content.addComponents(searchBar, searchResult);
+        searchResult = new VerticalLayout();
+        searchResult.setMargin(false);
+        searchResult.setSizeFull();
+
+        documentDetail = new CssLayout();
+
+        final HorizontalSplitPanel documentContent = new HorizontalSplitPanel(searchResult, documentDetail);
+        documentContent.setSizeFull();
+
+        content.addComponents(searchBar, documentContent);
 
         setContent(content);
 
@@ -110,12 +127,16 @@ public class SCArchiveUi extends UI {
         }
         searchResultCountLabel.setValue("...");
         searchResult.removeAllComponents();
+        documentDetail.removeAllComponents();
+
         final Set<Finding> findings = finder.find(searchField.getValue());
         findings.forEach(finding -> {
             searchResult.addComponent(createResultComponent(finding));
         });
         if (findings.size() == 0) {
             searchResult.addComponent(new Label("Nichts gefunden :("));
+        } else {
+            updateDetailComponent(findings.iterator().next());
         }
 
         updateSearchResultCount(findings.size());
@@ -134,27 +155,21 @@ public class SCArchiveUi extends UI {
             searchResult.addComponent(createResultComponent(finding));
         });
         updateSearchResultCount(findings.size());
+        if (findings.size() > 0) {
+            updateDetailComponent(findings.iterator().next());
+        }
     }
 
-    private Component createResultComponent(Finding finding) {
-        final MetaData data = finding.getMetaData();
-        final Panel result = new Panel();
-        result.setResponsive(true);
-        final HorizontalLayout row = new HorizontalLayout();
-        final VerticalLayout info = new VerticalLayout();
-        Image image = null;
-        if (data.getThumbnailPaths().size() > 0) {
-            final File imageFile = new File(data.getThumbnailPaths().get(0));
-            if (imageFile.exists()) {
-                image = new Image(null, new FileResource(imageFile));
-                image.setWidth(180, Unit.PIXELS);
-            }
-        }
-        final Label contextLabel = new Label(finding.getContext());
-        contextLabel.setContentMode(ContentMode.TEXT);
-        contextLabel.setWidth(60f, Unit.PERCENTAGE);
-        final Label tagLabel = new Label();
+    private void updateDetailComponent(Finding finding) {
+        documentDetail.removeAllComponents();
+        documentDetail.addComponent(createDetailComponent(finding));
+    }
 
+    private Component createDetailComponent(Finding finding) {
+        final MetaData data = finding.getMetaData();
+
+        final VerticalLayout detail = new VerticalLayout();
+        detail.setSizeFull();
         final CssLayout buttons = new CssLayout();
         buttons.addStyleName(ValoTheme.LAYOUT_COMPONENT_GROUP);
         final Button editButton = new Button("Bearbeiten");
@@ -164,25 +179,51 @@ public class SCArchiveUi extends UI {
 
         buttons.addComponents(editButton, openButton);
 
-        info.addComponent(buttons);
+        detail.addComponent(buttons);
+
+        final BrowserFrame bf = new BrowserFrame();
+        bf.setSource(new FileResource(metaDataService.getOriginalFilePath(data).toFile()));
+        bf.setSizeFull();
+        detail.addComponent(bf);
+
+        editButton.addClickListener(event -> {
+            getUI().addWindow(new EditMetaDataWindow(data, metaData -> {
+                // TODO add binding to search result panel left
+            }));
+        });
+
+        return detail;
+    }
+
+    private Component createResultComponent(Finding finding) {
+        final MetaData data = finding.getMetaData();
+        final Panel result = new Panel();
+        result.setResponsive(true);
+        final VerticalLayout info = new VerticalLayout();
+        Image image = null;
+        if (data.getThumbnailPaths().size() > 0) {
+            final File imageFile = new File(data.getThumbnailPaths().get(0));
+            if (imageFile.exists()) {
+                image = new Image(null, new FileResource(imageFile));
+                image.setWidth(180, Unit.PIXELS);
+            }
+        }
+        final Label tagLabel = new Label();
+
         if (image != null) {
             info.addComponent(image);
         }
         info.addComponent(tagLabel);
-        row.addComponent(info);
-        row.addComponent(contextLabel);
-        result.setContent(row);
 
-        row.setMargin(true);
+        result.setContent(info);
+
         info.setMargin(false);
 
-        editButton.addClickListener(event -> {
-            getUI().addWindow(new EditMetaDataWindow(data, metaData -> {
-                metaDataToUI(metaData, finding, result, tagLabel, contextLabel);
-            }));
+        result.addClickListener(event -> {
+            updateDetailComponent(finding);
         });
 
-        metaDataToUI(data, finding, result, tagLabel, contextLabel);
+        metaDataToUI(data, finding, result, tagLabel);
         return result;
     }
 
@@ -199,18 +240,17 @@ public class SCArchiveUi extends UI {
                 }
             });
         } else {
-            final FileDownloader downloader = new FileDownloader(new FileResource(new File(data.getFilePath())));
+            final FileDownloader downloader = new FileDownloader(
+                    new FileResource(metaDataService.getOriginalFilePath(data).toFile()));
             downloader.extend(openButton);
         }
         return openButton;
     }
 
-    private void metaDataToUI(MetaData metaData, Finding finding, Panel panel, Label tagLabel, Label contextLabel) {
+    private void metaDataToUI(MetaData metaData, Finding finding, Panel panel, Label tagLabel) {
         final SimpleDateFormat sdf = new SimpleDateFormat();
-
         panel.setCaption(sdf.format(metaData.getLastUpdateMetaData()) + " - " + metaData.getTitle());
         tagLabel.setValue(String.join(", ", metaData.getTags()));
-        contextLabel.setValue(finding.getContext());
     }
 
 }

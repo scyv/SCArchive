@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Date;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.imageio.ImageIO;
@@ -24,6 +23,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import de.scyv.scarchive.server.MetaData;
+import de.scyv.scarchive.server.MetaDataService;
 import de.scyv.scarchive.server.processing.GraphicsMagickRunner;
 import de.scyv.scarchive.server.processing.ProcessRunner;
 import de.scyv.scarchive.server.processing.TesseractRunner;
@@ -53,6 +53,12 @@ public class PDFTextExtractor implements Extractor {
     @Value("${scarchive.graphicsmagick.bin}")
     private String graphicsmagickBin;
 
+    private final MetaDataService metaDataService;
+
+    public PDFTextExtractor(MetaDataService metaDataService) {
+        this.metaDataService = metaDataService;
+    }
+
     @Override
     public String getIdentifier() {
         return "PDF";
@@ -71,19 +77,12 @@ public class PDFTextExtractor implements Extractor {
      */
     @Override
     public void extract(Path path) {
-
-        if (isAlreadyExtracted(path)) {
-            return;
-        }
-
         LOGGER.info("Extracting " + path);
-
         try {
             final MetaData metaData = new MetaData();
-            metaData.setFilePath(path.toString());
             metaData.setTitle(path.getFileName().toString());
 
-            final Path metaDataPath = getMetaDataPath(path);
+            final Path metaDataPath = metaDataService.getMetaDataPathPrefix(path);
             metaDataPath.getParent().toFile().mkdirs();
 
             try (PDDocument doc = PDDocument.load(new FileInputStream(path.toFile()))) {
@@ -93,18 +92,16 @@ public class PDFTextExtractor implements Extractor {
                     // if we cannot find any text, do ocr over every page
                     iteratePages(doc.getPages(), metaDataPath, metaData);
                 } else {
-                    Files.write(getTextDataFile(path), text.getBytes("UTF-8"));
+                    Files.write(Paths.get(metaDataPath + "_1.png.txt"), text.getBytes("UTF-8"));
                     // TODO create thumbnail from first page
                 }
             }
-            LOGGER.info("Writing meta data...");
-            metaData.setLastUpdateFile(new Date(Files.getLastModifiedTime(path).toMillis()));
-            metaData.saveToFile(Paths.get(metaDataPath + ".json"));
+            final Path metaDataJsonPath = metaDataService.getMetaDataPath(path);
+            LOGGER.info("Writing meta data: " + metaDataJsonPath);
+            metaData.saveToFile(metaDataJsonPath);
         } catch (final Exception ex) {
-
             LOGGER.error("Could not extract file " + path, ex);
         }
-
     }
 
     private void iteratePages(PDPageTree pages, Path metaDataPath, MetaData metaData) {
@@ -141,21 +138,6 @@ public class PDFTextExtractor implements Extractor {
         doOCR(pageImageFile.toPath());
         pageImageFile.delete();
 
-    }
-
-    private boolean isAlreadyExtracted(Path path) {
-        return Files.exists(getMetaDataPath(Paths.get(path.toString() + ".json")));
-    }
-
-    /**
-     * converts ./bla/blubb.pdf to ./bla/.scarchive/blubb.pdf
-     */
-    private Path getMetaDataPath(Path path) {
-        return Paths.get(path.getParent().toString(), ".scarchive", path.getFileName().toString());
-    }
-
-    private Path getTextDataFile(Path path) {
-        return Paths.get(path.getParent().toString(), ".scarchive", path.getFileName().toString() + "_1.png.txt");
     }
 
     private void doOCR(Path filePath) throws IOException, InterruptedException {

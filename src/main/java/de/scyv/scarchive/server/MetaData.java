@@ -1,11 +1,13 @@
 package de.scyv.scarchive.server;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -13,53 +15,53 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  */
 public class MetaData {
 
-    private String filePath;
-    private List<String> thumbnailPaths = new ArrayList<>();
-
     private String text = "";
 
     private String title;
 
-    private Date lastUpdateMetaData;
-
-    private Date lastUpdateFile;
+    private List<String> thumbnailPaths = new ArrayList<>();
 
     private List<String> tags = new ArrayList<>();
+
+    // set at runtime
+    @JsonIgnore
+    private Path filePath;
+
+    // set at runtime
+    @JsonIgnore
+    private Date lastUpdateMetaData;
 
     /**
      * Factory Method that creates a metaData instance from a given json file.
      *
      * @param metaDataFile
-     *            the file to load.
+     *            the file to load. Must not be <code>null</code>.
      * @return Instance of the metaData
      * @throws IOException
      *             when the file cannot be read.
      */
     public static MetaData createFromFile(Path metaDataFile) throws IOException {
         final ObjectMapper mapper = new ObjectMapper();
-        return mapper.readValue(metaDataFile.toFile(), MetaData.class);
+        final MetaData metaData = mapper.readValue(metaDataFile.toFile(), MetaData.class);
+        metaData.setFilePath(metaDataFile);
+        metaData.setLastUpdateMetaData(new Date(Files.getLastModifiedTime(metaDataFile).toMillis()));
+        return metaData;
     }
 
     /**
      * Save metaData to a json file.
      *
      * @param metaDataFile
-     *            path where the data shall be stored.
+     *            path where the data shall be stored. Must not be
+     *            <code>null</code>.
      * @throws IOException
      *             when writing to the json file fails.
      */
     public void saveToFile(Path metaDataFile) throws IOException {
         final ObjectMapper mapper = new ObjectMapper();
         this.setLastUpdateMetaData(new Date());
+        this.setFilePath(metaDataFile);
         mapper.writeValue(metaDataFile.toFile(), this);
-    }
-
-    public String getFilePath() {
-        return filePath;
-    }
-
-    public void setFilePath(String filePath) {
-        this.filePath = filePath;
     }
 
     public List<String> getThumbnailPaths() {
@@ -102,12 +104,12 @@ public class MetaData {
         this.lastUpdateMetaData = lastUpdateMetaData;
     }
 
-    public Date getLastUpdateFile() {
-        return lastUpdateFile;
+    public Path getFilePath() {
+        return filePath;
     }
 
-    public void setLastUpdateFile(Date lastUpdateFile) {
-        this.lastUpdateFile = lastUpdateFile;
+    public void setFilePath(Path filePath) {
+        this.filePath = filePath;
     }
 
 }

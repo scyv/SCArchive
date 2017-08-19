@@ -1,6 +1,5 @@
 package de.scyv.scarchive.search;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -21,6 +20,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import de.scyv.scarchive.server.MetaData;
+import de.scyv.scarchive.server.MetaDataService;
 
 /**
  * Service for finding documents by query.
@@ -30,11 +30,17 @@ public class DocumentFinder {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DocumentFinder.class);
 
-    @Value("${scarchive.maxfindings}")
-    private Integer maxfindings;
+    @Value("${scarchive.maxSearchResults}")
+    private Integer maxSearchResults;
 
-    @Value("${scarchive.documentpaths}")
+    @Value("${scarchive.documentPaths}")
     private String documentPaths;
+
+    private final MetaDataService metaDataService;
+
+    public DocumentFinder(MetaDataService metaDataService) {
+        this.metaDataService = metaDataService;
+    }
 
     /**
      * Find documents by a search string.
@@ -63,6 +69,11 @@ public class DocumentFinder {
         return Collections.unmodifiableSortedSet(sortedFindings);
     }
 
+    /**
+     * Find the newest entries.
+     *
+     * @return list of findins. Empty list, if nothing could be found.
+     */
     public Set<Finding> findNewest() {
 
         final Map<String, Finding> findings = new HashMap<>();
@@ -95,7 +106,7 @@ public class DocumentFinder {
                 }
                 return false;
             }).forEach(metaDataPath -> {
-                if (findings.size() >= maxfindings) {
+                if (findings.size() >= maxSearchResults) {
                     return;
                 }
                 final Finding finding = new Finding();
@@ -114,7 +125,7 @@ public class DocumentFinder {
         searchStrings.parallelStream().forEach(searchString -> {
             try {
                 Files.walk(path).filter(Files::isRegularFile).forEach(metaDataPath -> {
-                    if (findings.size() >= maxfindings) {
+                    if (findings.size() >= maxSearchResults) {
                         return;
                     }
                     if (metaDataPath.toString().endsWith(".txt")) {
@@ -130,35 +141,31 @@ public class DocumentFinder {
     }
 
     private void findInMetaData(Path metaDataPath, String searchString, Map<String, Finding> findings) {
-        if (findings.size() >= maxfindings) {
+        if (findings.size() >= maxSearchResults) {
             return;
         }
 
         try {
             final MetaData metaData = createMetaData(metaDataPath);
-
-            if (!Files.exists(Paths.get(metaData.getFilePath()))) {
+            final Path originalFilePath = metaDataService.getOriginalFilePath(metaData);
+            if (!Files.exists(originalFilePath)) {
                 Files.delete(metaDataPath);
                 return;
             }
 
             String context = "";
-            if (metaData.getText().toLowerCase().contains(searchString)) {
-                final String text = metaData.getText();
-                context = text.length() > 400 ? text.substring(0, 400) : text;
-            } else if (String.join(",", metaData.getTags()).toLowerCase().contains(searchString)) {
-                context = String.join(", ", metaData.getTags());
-            } else if (metaData.getTitle().toLowerCase().contains(searchString)) {
-                context = metaData.getTitle();
-            } else if (metaData.getFilePath().toLowerCase().contains(searchString)) {
-                context = metaData.getFilePath();
+            if (metaData.getText().toLowerCase().contains(searchString)
+                    || String.join(",", metaData.getTags()).toLowerCase().contains(searchString)
+                    || metaData.getTitle().toLowerCase().contains(searchString)
+                    || metaDataPath.toString().contains(searchString)) {
+                context = metaData.getText();
             }
 
-            if (!context.isEmpty()) {
+            if (!context.isEmpty() && findings.get(originalFilePath.toString()) == null) {
                 final Finding finding = new Finding();
                 finding.setMetaData(metaData);
                 finding.setContext(context);
-                findings.put(metaData.getFilePath(), finding);
+                findings.put(originalFilePath.toString(), finding);
             }
 
         } catch (final IOException ex) {
@@ -171,11 +178,14 @@ public class DocumentFinder {
             Files.readAllLines(textDataPath).parallelStream().forEach(line -> {
                 if (line.replaceAll("\\s", "").toLowerCase().contains(searchString)) {
                     LOGGER.debug("Found something in " + textDataPath + ": " + line);
-                    final Finding finding = new Finding();
-                    finding.setMetaData(createMetaData(textDataPath));
-                    finding.setContext(line);
-                    // TODO fix that: we possibly have two findings for the same file: textDataPath
-                    // is wrong at this place
+                    Finding finding = findings.get(textDataPath.toString());
+                    if (finding == null) {
+                        finding = new Finding();
+                        finding.setMetaData(createMetaData(textDataPath));
+                        finding.setContext(line);
+                    } else {
+                        finding.setContext(finding.getContext() + "<br><br>...<br><br>" + line);
+                    }
                     findings.put(textDataPath.toString(), finding);
                 }
             });
@@ -195,19 +205,14 @@ public class DocumentFinder {
             if (metaData.getLastUpdateMetaData() == null) {
                 metaData.setLastUpdateMetaData(new Date(Files.getLastModifiedTime(metaDataFile).toMillis()));
             }
-            if (metaData.getLastUpdateFile() == null) {
-                metaData.setLastUpdateFile(new Date(new File(metaData.getFilePath()).lastModified()));
-            }
         } catch (final IOException e) {
             LOGGER.warn("Cannot open metaDataFile " + metaDataFile + ". Creating one for you...");
+            final String originFileName = Paths.get(path.toString().replaceAll("_\\d+\\.png\\.txt$", "")).getFileName()
+                    .toString();
             metaData = new MetaData();
-            metaData.setTitle(path.getFileName().toString());
-            metaData.setFilePath(path.toString().replace("/.scarchive/", "/").replaceAll("_\\d+\\.png\\.txt$", ""));
-            metaData.setLastUpdateFile(new Date(new File(metaData.getFilePath()).lastModified()));
+            metaData.setTitle(originFileName);
             metaData.getThumbnailPaths()
-                    .add(Paths
-                            .get(path.getParent().toString(), ("thumb_" + path.getFileName()).replaceAll("\\.txt$", ""))
-                            .toString());
+                    .add(Paths.get(("thumb_" + path.getFileName()).replaceAll("\\.txt$", "")).toString());
             try {
                 metaData.saveToFile(metaDataFile);
             } catch (final IOException ioe) {

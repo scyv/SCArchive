@@ -42,12 +42,12 @@ public class LoggingOutputStream extends OutputStream {
     /**
      * The logger to write to.
      */
-    private Logger log;
+    private final Logger log;
 
     /**
      * The log level.
      */
-    private LogLevel level;
+    private final LogLevel level;
 
     /**
      * Creates the Logging instance to flush to the given logger.
@@ -78,6 +78,7 @@ public class LoggingOutputStream extends OutputStream {
      * @throws IOException
      *             if an I/O error occurs.
      */
+    @Override
     public void write(final int b) throws IOException {
         if (hasBeenClosed) {
             throw new IOException("The stream has been closed.");
@@ -86,7 +87,6 @@ public class LoggingOutputStream extends OutputStream {
         if (b == 0) {
             return;
         }
-        // would this be writing past the buffer?
         if (count == curBufLength) {
             // grow the buffer
             final int newBufLength = curBufLength + DEFAULT_BUFFER_LENGTH;
@@ -104,13 +104,14 @@ public class LoggingOutputStream extends OutputStream {
      * Flushes this output stream and forces any buffered output bytes to be written
      * out.
      */
+    @Override
     public void flush() {
         if (count == 0) {
             return;
         }
         final byte[] bytes = new byte[count];
         System.arraycopy(buf, 0, bytes, 0, count);
-        String str = new String(bytes);
+        final String str = new String(bytes);
         switch (this.level) {
         case ERROR:
             log.error(str);
@@ -126,6 +127,7 @@ public class LoggingOutputStream extends OutputStream {
      * Closes this output stream and releases any system resources associated with
      * this stream.
      */
+    @Override
     public void close() {
         flush();
         hasBeenClosed = true;

@@ -59,8 +59,9 @@ public class ExtractionCollection {
     }
 
     /**
-     * Retrieve the set of paths for a given extractor.
-     * 
+     * Retrieve the set of paths for a given extractor. Must not be
+     * <code>null</code>.
+     *
      * @param extractor
      *            the extractor to get the paths from.
      * @return an unmodifiable set of paths.

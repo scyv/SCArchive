@@ -26,6 +26,9 @@ public class SCArchive {
     @Value("${scarchive.enablescan}")
     private Boolean enableScan;
 
+    @Value("${scarchive.documentPaths}")
+    private String documentPaths;
+
     @Autowired
     private PDFTextExtractor pdfTextExtractor;
 
@@ -37,11 +40,8 @@ public class SCArchive {
      *
      * @param scheduler
      *            the scheduler service that executes the scan job periodically
-     * @param documentPaths
-     *            application property containing a list of paths that should be
-     *            scanned
      */
-    public SCArchive(Scheduler scheduler, @Value("${scarchive.documentpaths}") String documentPaths) {
+    public SCArchive(Scheduler scheduler) {
 
         scheduler.addRunner(() -> {
             if (enableScan) {
