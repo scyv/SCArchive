@@ -1,4 +1,4 @@
-package de.scyv.scarchive.search;
+package de.scyv.scarchive.server.search;
 
 import java.util.Comparator;
 

@@ -32,10 +32,10 @@ import com.vaadin.ui.UI;
 import com.vaadin.ui.VerticalLayout;
 import com.vaadin.ui.themes.ValoTheme;
 
-import de.scyv.scarchive.search.DocumentFinder;
-import de.scyv.scarchive.search.Finding;
 import de.scyv.scarchive.server.MetaData;
 import de.scyv.scarchive.server.MetaDataService;
+import de.scyv.scarchive.server.search.DocumentFinder;
+import de.scyv.scarchive.server.search.Finding;
 
 @Theme("scarchive")
 @SpringUI(path = "")
