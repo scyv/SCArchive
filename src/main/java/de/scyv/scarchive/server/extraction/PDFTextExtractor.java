@@ -92,7 +92,7 @@ public class PDFTextExtractor implements Extractor {
                     Files.write(Paths.get(metaDataPath + "_1.png.txt"), text.getBytes("UTF-8"));
                     final PDFRenderer renderer = new PDFRenderer(doc);
                     final BufferedImage image = renderer.renderImageWithDPI(0, 300);
-                    processImage(metaDataPath, metaData, 1, image);
+                    processImage(metaDataPath, metaData, 1, image, false);
                 }
             }
             final Path metaDataJsonPath = metaDataService.getMetaDataPath(path);
@@ -108,7 +108,7 @@ public class PDFTextExtractor implements Extractor {
         for (int pageNr = 0; pageNr < doc.getNumberOfPages(); pageNr++) {
             try {
                 final BufferedImage image = renderer.renderImageWithDPI(pageNr, 300);
-                processImage(metaDataPath, metaData, pageNr + 1, image);
+                processImage(metaDataPath, metaData, pageNr + 1, image, true);
             } catch (InterruptedException | IOException ex) {
                 LOGGER.error("Cannot render page " + pageNr + " of document.", ex);
             }
@@ -116,7 +116,7 @@ public class PDFTextExtractor implements Extractor {
 
     }
 
-    private void processImage(Path metaDataPath, MetaData metaData, int imgCount, BufferedImage image)
+    private void processImage(Path metaDataPath, MetaData metaData, int imgCount, BufferedImage image, boolean withOCR)
             throws IOException, InterruptedException {
         final File pageImageFile = new File(metaDataPath + "_" + imgCount + ".png");
         LOGGER.info("Writing image " + pageImageFile.getAbsolutePath());
@@ -124,9 +124,10 @@ public class PDFTextExtractor implements Extractor {
         if (imgCount == 1) {
             createThumbnail(pageImageFile.toPath(), metaData);
         }
-        doOCR(pageImageFile.toPath());
+        if (withOCR) {
+            doOCR(pageImageFile.toPath());
+        }
         pageImageFile.delete();
-
     }
 
     private void doOCR(Path filePath) throws IOException, InterruptedException {
