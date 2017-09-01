@@ -10,4 +10,15 @@ public class ScArchiveApplication {
         SpringApplication.run(ScArchiveApplication.class, args);
     }
 
+    // @Component
+    // public static class Fixture {
+    // public Fixture(Authenticator authenticator, UserRepository userRepo) throws
+    // NoSuchAlgorithmException {
+    // final User user = new User();
+    // user.setName("scyv");
+    // authenticator.createCredentials(user, "test");
+    // userRepo.save(user);
+    // }
+    // }
+
 }
