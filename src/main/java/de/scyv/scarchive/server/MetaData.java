@@ -3,6 +3,7 @@ package de.scyv.scarchive.server;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -45,6 +46,13 @@ public class MetaData {
         final MetaData metaData = mapper.readValue(metaDataFile.toFile(), MetaData.class);
         metaData.setFilePath(metaDataFile);
         metaData.setLastUpdateMetaData(new Date(Files.getLastModifiedTime(metaDataFile).toMillis()));
+        if (metaData.getThumbnailPaths() != null && metaData.getThumbnailPaths().size() > 0) {
+            final List<String> newPaths = new ArrayList<>();
+            for (final String path : metaData.getThumbnailPaths()) {
+                newPaths.add(Paths.get(path).getFileName().toString());
+            }
+            metaData.setThumbnailPaths(newPaths);
+        }
         return metaData;
     }
 

@@ -3,6 +3,7 @@ package de.scyv.scarchive.views;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.Set;
 
@@ -230,7 +231,8 @@ public class DocumentsView extends VerticalLayout implements ScarchiveView {
     private void addThumbnail(final MetaData data, final VerticalLayout info, int width) {
         Image image = null;
         if (data.getThumbnailPaths().size() > 0) {
-            final File imageFile = new File(data.getThumbnailPaths().get(0));
+            final File imageFile = Paths.get(data.getFilePath().getParent().toString(), data.getThumbnailPaths().get(0))
+                    .toFile();
             if (imageFile.exists()) {
                 image = new Image(null, new FileResource(imageFile));
                 image.setWidth(width, Unit.PIXELS);

@@ -137,8 +137,7 @@ public class PDFTextExtractor implements Extractor {
 
     private void createThumbnail(Path filePath, MetaData metaData) throws IOException, InterruptedException {
         new GraphicsMagickRunner(filePath, graphicsmagickBin).prepareForThumbnail().run();
-        metaData.getThumbnailPaths()
-                .add(Paths.get(filePath.getParent().toString(), "thumb_" + filePath.getFileName()).toString());
+        metaData.getThumbnailPaths().add("thumb_" + filePath.getFileName());
 
     }
 
