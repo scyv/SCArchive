@@ -7,15 +7,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.imageio.ImageIO;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPageTree;
-import org.apache.pdfbox.pdmodel.PDResources;
-import org.apache.pdfbox.pdmodel.graphics.PDXObject;
-import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
+import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -91,10 +87,12 @@ public class PDFTextExtractor implements Extractor {
                 final String text = stripper.getText(doc);
                 if (text.trim().isEmpty()) {
                     // if we cannot find any text, do ocr over every page
-                    iteratePages(doc.getPages(), metaDataPath, metaData);
+                    iteratePages(doc, metaDataPath, metaData);
                 } else {
                     Files.write(Paths.get(metaDataPath + "_1.png.txt"), text.getBytes("UTF-8"));
-                    // TODO create thumbnail from first page
+                    final PDFRenderer renderer = new PDFRenderer(doc);
+                    final BufferedImage image = renderer.renderImageWithDPI(0, 300);
+                    processImage(metaDataPath, metaData, 1, image);
                 }
             }
             final Path metaDataJsonPath = metaDataService.getMetaDataPath(path);
@@ -105,35 +103,25 @@ public class PDFTextExtractor implements Extractor {
         }
     }
 
-    private void iteratePages(PDPageTree pages, Path metaDataPath, MetaData metaData) {
-        final AtomicInteger imgCount = new AtomicInteger(0);
-        final AtomicInteger pageCount = new AtomicInteger(0);
-        pages.forEach(page -> {
-            LOGGER.info("Extracting " + metaData.getFilePath() + " page: " + pageCount.incrementAndGet());
-            iterateImages(page.getResources(), metaDataPath, metaData, imgCount);
-        });
-
-    }
-
-    private void iterateImages(PDResources resources, Path metaDataPath, MetaData metaData, AtomicInteger imgCount) {
-        resources.getXObjectNames().forEach(name -> {
+    private void iteratePages(PDDocument doc, Path metaDataPath, MetaData metaData) {
+        final PDFRenderer renderer = new PDFRenderer(doc);
+        for (int pageNr = 0; pageNr < doc.getNumberOfPages(); pageNr++) {
             try {
-                final PDXObject obj = resources.getXObject(name);
-                if (obj instanceof PDImageXObject) {
-                    processImage(metaDataPath, metaData, imgCount, (((PDImageXObject) obj).getImage()));
-                }
+                final BufferedImage image = renderer.renderImageWithDPI(pageNr, 300);
+                processImage(metaDataPath, metaData, pageNr + 1, image);
             } catch (InterruptedException | IOException ex) {
-                LOGGER.error("Cannot process image of " + metaData.getFilePath(), ex);
+                LOGGER.error("Cannot render page " + pageNr + " of document.", ex);
             }
-        });
+        }
+
     }
 
-    private void processImage(Path metaDataPath, MetaData metaData, AtomicInteger imgCount, BufferedImage image)
+    private void processImage(Path metaDataPath, MetaData metaData, int imgCount, BufferedImage image)
             throws IOException, InterruptedException {
-        final File pageImageFile = new File(metaDataPath + "_" + imgCount.incrementAndGet() + ".png");
+        final File pageImageFile = new File(metaDataPath + "_" + imgCount + ".png");
         LOGGER.info("Writing image " + pageImageFile.getAbsolutePath());
         ImageIO.write(image, "png", pageImageFile);
-        if (imgCount.get() == 1) {
+        if (imgCount == 1) {
             createThumbnail(pageImageFile.toPath(), metaData);
         }
         doOCR(pageImageFile.toPath());

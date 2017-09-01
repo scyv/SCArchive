@@ -186,6 +186,9 @@ public class DocumentsView extends VerticalLayout implements ScarchiveView {
 
         documentDetail.addComponent(new Label(data.getTitle()));
         documentDetail.addComponent(buttons);
+
+        addThumbnail(data, documentDetail, 300);
+
         final Label noteContent = new Label(data.getText());
         noteContent.setContentMode(ContentMode.HTML);
         documentDetail.addComponent(noteContent);
@@ -208,19 +211,8 @@ public class DocumentsView extends VerticalLayout implements ScarchiveView {
         final Panel result = new Panel();
         result.setResponsive(true);
         final VerticalLayout info = new VerticalLayout();
-        Image image = null;
-        if (data.getThumbnailPaths().size() > 0) {
-            final File imageFile = new File(data.getThumbnailPaths().get(0));
-            if (imageFile.exists()) {
-                image = new Image(null, new FileResource(imageFile));
-                image.setWidth(180, Unit.PIXELS);
-            }
-        }
+        addThumbnail(data, info, 180);
         final Label tagLabel = new Label();
-
-        if (image != null) {
-            info.addComponent(image);
-        }
         info.addComponent(tagLabel);
 
         result.setContent(info);
@@ -233,6 +225,20 @@ public class DocumentsView extends VerticalLayout implements ScarchiveView {
 
         metaDataToUI(data, finding, result, tagLabel);
         return result;
+    }
+
+    private void addThumbnail(final MetaData data, final VerticalLayout info, int width) {
+        Image image = null;
+        if (data.getThumbnailPaths().size() > 0) {
+            final File imageFile = new File(data.getThumbnailPaths().get(0));
+            if (imageFile.exists()) {
+                image = new Image(null, new FileResource(imageFile));
+                image.setWidth(width, Unit.PIXELS);
+            }
+        }
+        if (image != null) {
+            info.addComponent(image);
+        }
     }
 
     private Button createOpenButton(MetaData data) {
