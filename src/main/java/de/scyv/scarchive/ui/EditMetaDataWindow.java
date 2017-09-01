@@ -2,8 +2,6 @@ package de.scyv.scarchive.ui;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
@@ -102,16 +100,13 @@ public class EditMetaDataWindow extends Window {
         saveButton.addClickListener(event -> {
             try {
                 binder.writeBean(metaData);
-                final Path path = metaData.getFilePath();
-                final Path metaDataPath = Paths.get(path.getParent().toString(), ".scarchive",
-                        path.getFileName().toString() + ".json");
                 try {
-                    LOGGER.debug("Saving meta data to: " + metaDataPath);
-                    metaData.saveToFile(metaDataPath);
+                    LOGGER.debug("Saving meta data to: " + metaData.getFilePath());
+                    metaData.saveToFile(metaData.getFilePath());
                     Notification.show("Speichern erfolreich.", Type.TRAY_NOTIFICATION);
                     saveCallback.accept(metaData);
                 } catch (final IOException ex) {
-                    LOGGER.error("Cannot save meta data file to " + metaDataPath, ex);
+                    LOGGER.error("Cannot save meta data file to " + metaData.getFilePath(), ex);
                 }
             } catch (final ValidationException ex) {
                 LOGGER.error("Could not validate", ex);

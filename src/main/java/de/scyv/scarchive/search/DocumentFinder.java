@@ -109,8 +109,17 @@ public class DocumentFinder {
                 if (findings.size() >= maxSearchResults) {
                     return;
                 }
-                final Finding finding = new Finding();
                 final MetaData metaData = createMetaData(metaDataPath);
+                if (!Files.exists(metaDataService.getOriginalFilePath(metaData))) {
+                    try {
+                        Files.delete(metaDataPath);
+                        return;
+                    } catch (final IOException ioe) {
+                        LOGGER.error("Cannot delete meta data file: " + metaDataPath, ioe);
+                    }
+                }
+
+                final Finding finding = new Finding();
                 finding.setMetaData(metaData);
                 finding.setContext(metaData.getText());
 

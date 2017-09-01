@@ -1,0 +1,20 @@
+@import "../valo/styles.scss";
+
+@mixin scarchive {
+    @include valo;
+
+    .sc-content {
+        height: 100%;
+    
+        .v-slot-sc-searchBar {
+            height: 3rem;
+        }
+        .v-slot-sc-splitPane {
+            height: calc(100% - 3rem - 12px);
+            overflow: auto;
+        }
+    }
+    .sc-searchBar {
+        width: 100%;
+    }
+}

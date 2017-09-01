@@ -101,7 +101,9 @@ public class SCArchive {
                 .forEach(path -> {
                     toExtract.add(path);
                 });
-
+        if (toExtract.size() == 0) {
+            return;
+        }
         LOGGER.info("Running extraction for " + extractor.getIdentifier() + ": " + toExtract.size() + " items...");
         final AtomicInteger currentCount = new AtomicInteger(0);
         toExtract.stream().forEach(path -> {
@@ -110,6 +112,8 @@ public class SCArchive {
                             currentCount.getAndIncrement(), toExtract.size()));
             extractor.extract(path);
         });
+        LOGGER.info("Extraction for " + extractor.getIdentifier() + " done.");
+
     }
 
 }

@@ -2,6 +2,7 @@ package de.scyv.scarchive.ui;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.util.Set;
 
@@ -15,11 +16,9 @@ import com.vaadin.event.ShortcutAction.KeyCode;
 import com.vaadin.icons.VaadinIcons;
 import com.vaadin.server.FileDownloader;
 import com.vaadin.server.FileResource;
-import com.vaadin.server.Responsive;
 import com.vaadin.server.VaadinRequest;
 import com.vaadin.spring.annotation.SpringUI;
 import com.vaadin.ui.Alignment;
-import com.vaadin.ui.BrowserFrame;
 import com.vaadin.ui.Button;
 import com.vaadin.ui.Component;
 import com.vaadin.ui.CssLayout;
@@ -38,7 +37,7 @@ import de.scyv.scarchive.search.Finding;
 import de.scyv.scarchive.server.MetaData;
 import de.scyv.scarchive.server.MetaDataService;
 
-@Theme("valo")
+@Theme("scarchive")
 @SpringUI(path = "")
 public class SCArchiveUi extends UI {
 
@@ -51,8 +50,6 @@ public class SCArchiveUi extends UI {
 
     @Autowired
     private DocumentFinder finder;
-
-    private CssLayout searchForm;
 
     private TextField searchField;
 
@@ -72,18 +69,40 @@ public class SCArchiveUi extends UI {
     public void init(VaadinRequest request) {
         getPage().setTitle("SCArchive");
 
-        Responsive.makeResponsive(this);
-        this.setSizeFull();
-
         final VerticalLayout content = new VerticalLayout();
-        content.setSizeFull();
+        final HorizontalLayout searchBar = createSearchBar();
 
+        searchResult = new VerticalLayout();
+        documentDetail = new VerticalLayout();
+        final HorizontalSplitPanel documentContent = new HorizontalSplitPanel(searchResult, documentDetail);
+
+        content.addComponents(searchBar, documentContent);
+        setContent(content);
+
+        findNewestEntries();
+
+        content.addStyleName("sc-content");
+        searchBar.addStyleName("sc-searchBar");
+        documentContent.addStyleName("sc-splitPane");
+        searchResult.addStyleName("sc-searchResult");
+
+    }
+
+    private HorizontalLayout createSearchBar() {
         final HorizontalLayout searchBar = new HorizontalLayout();
-        searchBar.setWidth("100%");
-        searchForm = new CssLayout();
-        searchForm.setWidth("100%");
-        searchForm.addStyleName(ValoTheme.LAYOUT_COMPONENT_GROUP);
+        final CssLayout searchForm = createSearchForm();
         searchBar.addComponent(searchForm);
+        searchBar.addComponent(searchResultCountLabel);
+        searchBar.setComponentAlignment(searchResultCountLabel, Alignment.MIDDLE_RIGHT);
+        searchBar.setExpandRatio(searchForm, 8);
+        searchBar.setExpandRatio(searchResultCountLabel, 2);
+        return searchBar;
+    }
+
+    private CssLayout createSearchForm() {
+        final CssLayout searchForm = new CssLayout();
+        searchForm.addStyleName(ValoTheme.LAYOUT_COMPONENT_GROUP);
+        searchForm.addStyleName("sc-searchForm");
         searchField = new TextField();
         searchField.setWidth(50f, Unit.PERCENTAGE);
         searchField.setPlaceholder("Suchbegriff");
@@ -91,39 +110,16 @@ public class SCArchiveUi extends UI {
 
         searchResultCountLabel = new Label("");
         searchResultCountLabel.addStyleName(ValoTheme.LABEL_SMALL);
+        searchResultCountLabel.addStyleName("sc-searchResultCount");
 
         searchForm.addComponents(searchField, searchButton);
-
-        searchBar.addComponent(searchResultCountLabel);
-        searchBar.setComponentAlignment(searchResultCountLabel, Alignment.MIDDLE_RIGHT);
-        searchBar.setExpandRatio(searchForm, 8);
-        searchBar.setExpandRatio(searchResultCountLabel, 2);
-
         searchButton.setClickShortcut(KeyCode.ENTER);
         searchButton.addClickListener(event -> {
             searchButton.setEnabled(false);
             runSearch(searchField.getValue());
             searchButton.setEnabled(true);
         });
-
-        searchResult = new VerticalLayout();
-        searchResult.setMargin(false);
-        searchResult.setSizeFull();
-
-        documentDetail = new VerticalLayout();
-        documentDetail.setSizeFull();
-
-        final HorizontalSplitPanel documentContent = new HorizontalSplitPanel(searchResult, documentDetail);
-        documentContent.setSizeFull();
-
-        content.addComponents(searchBar, documentContent);
-        content.setExpandRatio(searchBar, 1);
-        content.setExpandRatio(documentContent, 9);
-
-        setContent(content);
-
-        findNewestEntries();
-
+        return searchForm;
     }
 
     private void runSearch(String searchString) {
@@ -182,12 +178,14 @@ public class SCArchiveUi extends UI {
 
         buttons.addComponents(editButton, openButton);
 
+        documentDetail.addComponent(new Label(data.getTitle()));
         documentDetail.addComponent(buttons);
+        documentDetail.addComponent(new Label(data.getText()));
 
-        final BrowserFrame bf = new BrowserFrame();
-        bf.setSource(new FileResource(metaDataService.getOriginalFilePath(data).toFile()));
-        bf.setSizeFull();
-        documentDetail.addComponent(bf);
+        // final BrowserFrame bf = new BrowserFrame();
+        // bf.setSource(new
+        // FileResource(metaDataService.getOriginalFilePath(data).toFile()));
+        // documentDetail.addComponent(bf);
 
         editButton.addClickListener(event -> {
             getUI().addWindow(new EditMetaDataWindow(data, metaData -> {
@@ -235,10 +233,12 @@ public class SCArchiveUi extends UI {
         openButton.setIcon(VaadinIcons.DOWNLOAD);
         if (openlocal) {
             openButton.addClickListener(event -> {
+                final Path fileToOpen = metaDataService.getOriginalFilePath(data);
+                LOGGER.debug("Opening file locally: " + fileToOpen);
                 try {
-                    Runtime.getRuntime().exec("open " + data.getFilePath());
+                    Runtime.getRuntime().exec("open " + fileToOpen);
                 } catch (final IOException ex) {
-                    LOGGER.error("Cannot open " + data.getFilePath(), ex);
+                    LOGGER.error("Cannot open " + fileToOpen, ex);
                 }
             });
         } else {
