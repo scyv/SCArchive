@@ -17,6 +17,7 @@ import com.vaadin.event.ShortcutAction.KeyCode;
 import com.vaadin.icons.VaadinIcons;
 import com.vaadin.server.FileDownloader;
 import com.vaadin.server.FileResource;
+import com.vaadin.shared.ui.ContentMode;
 import com.vaadin.spring.annotation.SpringView;
 import com.vaadin.ui.Alignment;
 import com.vaadin.ui.Button;
@@ -71,7 +72,7 @@ public class DocumentsView extends VerticalLayout implements ScarchiveView {
 
         final VerticalLayout content = new VerticalLayout();
         final HorizontalLayout searchBar = createSearchBar();
-
+        content.setMargin(false);
         searchResult = new VerticalLayout();
         documentDetail = new VerticalLayout();
         final HorizontalSplitPanel documentContent = new HorizontalSplitPanel(searchResult, documentDetail);
@@ -185,7 +186,9 @@ public class DocumentsView extends VerticalLayout implements ScarchiveView {
 
         documentDetail.addComponent(new Label(data.getTitle()));
         documentDetail.addComponent(buttons);
-        documentDetail.addComponent(new Label(data.getText()));
+        final Label noteContent = new Label(data.getText());
+        noteContent.setContentMode(ContentMode.HTML);
+        documentDetail.addComponent(noteContent);
 
         // final BrowserFrame bf = new BrowserFrame();
         // bf.setSource(new

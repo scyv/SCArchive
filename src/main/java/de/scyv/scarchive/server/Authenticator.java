@@ -44,6 +44,16 @@ public class Authenticator {
     }
 
     /**
+     * Check whether current user is admin.
+     * 
+     * @return true if user is admin, false otherwise.
+     */
+    public boolean isCurrentUserAdmin() {
+        final User currentUser = userRepo.findOne(CurrentUser.get());
+        return currentUser != null && currentUser.isAdmin();
+    }
+
+    /**
      * Log a user in.
      *
      * When login was is successful, the current user can be accessed via
