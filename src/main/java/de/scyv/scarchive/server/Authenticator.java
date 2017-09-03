@@ -45,7 +45,7 @@ public class Authenticator {
 
     /**
      * Check whether current user is admin.
-     * 
+     *
      * @return true if user is admin, false otherwise.
      */
     public boolean isCurrentUserAdmin() {
@@ -66,22 +66,25 @@ public class Authenticator {
      * @return true, if the login was successful, false otherwise
      */
     public boolean login(final String userName, final String password) {
-        boolean passwordCorrect = false;
         final User user = userRepo.findByName(userName.toLowerCase());
         if (user == null) {
             return false;
         }
+        if (!user.isActive()) {
+            return false;
+        }
+        boolean loginSuccess = false;
         try {
             final String checkHash = createHash(password, user.getPasswordSalt());
             if (checkHash.equals(user.getPasswordHash())) {
-                passwordCorrect = true;
+                loginSuccess = true;
                 CurrentUser.set(user.getId());
             }
         } catch (final NoSuchAlgorithmException ex) {
             LOGGER.error("Cannot hash password as the hash algorithm is not supported.", ex);
         }
 
-        return passwordCorrect;
+        return loginSuccess;
 
     }
 
@@ -111,7 +114,7 @@ public class Authenticator {
 
     private String createRandomSalt() throws NoSuchAlgorithmException {
         final SecureRandom sr = SecureRandom.getInstance("SHA1PRNG");
-        final byte[] salt = new byte[32];
+        final byte[] salt = new byte[256];
         sr.nextBytes(salt);
         return new String(salt);
     }

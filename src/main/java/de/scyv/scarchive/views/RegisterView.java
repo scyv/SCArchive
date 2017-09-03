@@ -95,8 +95,10 @@ public class RegisterView extends VerticalLayout implements ScarchiveView {
         final User user = new User();
         user.setName(normalizedUserName);
         authenticator.createCredentials(user, password.getValue());
+        user.setActive(false);
         if (userRepo.count() == 0) {
             user.setAdmin(true);
+            user.setActive(true);
         }
         userRepo.save(user);
     }

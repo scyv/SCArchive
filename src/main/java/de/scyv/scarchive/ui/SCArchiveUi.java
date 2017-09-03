@@ -15,6 +15,7 @@ import com.vaadin.ui.Component;
 import com.vaadin.ui.UI;
 
 import de.scyv.scarchive.server.Authenticator;
+import de.scyv.scarchive.views.DocumentsView;
 import de.scyv.scarchive.views.LoginView;
 import de.scyv.scarchive.views.ScarchiveView;
 
@@ -34,21 +35,25 @@ public class SCArchiveUi extends UI implements ViewDisplay {
         this.authenticator = authenticator;
     }
 
-    @Value("${scarchive.openlocal}")
-    private Boolean openlocal;
+    @Value("${scarchive.requiresLogin}")
+    private Boolean requiresLogin;
 
     @Override
     public void init(VaadinRequest request) {
         getPage().setTitle("SCArchive");
-        if (!authenticator.isCurrentUserLoggedIn()) {
-            getNavigator().navigateTo(LoginView.VIEW_NAME);
+        if (requiresLogin) {
+            if (!authenticator.isCurrentUserLoggedIn()) {
+                getNavigator().navigateTo(LoginView.VIEW_NAME);
+            }
+        } else {
+            getNavigator().navigateTo(DocumentsView.VIEW_NAME);
         }
     }
 
     @Override
     public void showView(View view) {
         if (view instanceof ScarchiveView) {
-            if (!((ScarchiveView) view).loginNeeded() || authenticator.isCurrentUserLoggedIn()) {
+            if (!requiresLogin || !((ScarchiveView) view).loginNeeded() || authenticator.isCurrentUserLoggedIn()) {
                 setContent((Component) view);
             } else {
                 LOGGER.warn("User is not logged in. Redirecting to login page.");

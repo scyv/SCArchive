@@ -97,10 +97,9 @@ public class SCArchive {
 
     private void runExtraction(ExtractionCollection collection, Extractor extractor, AtomicInteger currentIdx) {
         final List<Path> toExtract = new ArrayList<>();
-        collection.get(extractor).parallelStream().filter(path -> !metaDataService.isAlreadyExtracted(path))
-                .forEach(path -> {
-                    toExtract.add(path);
-                });
+        collection.get(extractor).stream().filter(path -> !metaDataService.isAlreadyExtracted(path)).forEach(path -> {
+            toExtract.add(path);
+        });
         if (toExtract.size() == 0) {
             return;
         }

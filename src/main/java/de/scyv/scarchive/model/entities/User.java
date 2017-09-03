@@ -19,6 +19,7 @@ public class User {
     private String passwordHash;
     private String passwordSalt;
 
+    private boolean isActive;
     private boolean isAdmin;
 
     public long getId() {
@@ -59,6 +60,14 @@ public class User {
 
     public void setAdmin(boolean isAdmin) {
         this.isAdmin = isAdmin;
+    }
+
+    public boolean isActive() {
+        return isActive;
+    }
+
+    public void setActive(boolean isActive) {
+        this.isActive = isActive;
     }
 
 }

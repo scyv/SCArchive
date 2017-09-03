@@ -1,0 +1,1 @@
+-- nothing to do (we set flyway.baselineOnMigrate = true in application.properties) 
