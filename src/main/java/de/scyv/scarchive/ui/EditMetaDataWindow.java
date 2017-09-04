@@ -2,6 +2,7 @@ package de.scyv.scarchive.ui;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
@@ -75,7 +76,9 @@ public class EditMetaDataWindow extends Window {
         final FormLayout editForm = new FormLayout();
         editForm.setSizeFull();
         if (metaData.getThumbnailPaths().size() > 0) {
-            layout.addComponent(new Image(null, new FileResource(new File(metaData.getThumbnailPaths().get(0)))));
+            final File imageFile = Paths
+                    .get(metaData.getFilePath().getParent().toString(), metaData.getThumbnailPaths().get(0)).toFile();
+            layout.addComponent(new Image(null, new FileResource(imageFile)));
         }
         title = new TextField("Titel");
         tags = new TextField("Schlüsselwörter");

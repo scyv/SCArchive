@@ -18,14 +18,10 @@ import com.vaadin.event.ShortcutAction.KeyCode;
 import com.vaadin.icons.VaadinIcons;
 import com.vaadin.server.FileDownloader;
 import com.vaadin.server.FileResource;
-import com.vaadin.shared.ui.ContentMode;
 import com.vaadin.spring.annotation.SpringView;
-import com.vaadin.ui.Alignment;
 import com.vaadin.ui.Button;
 import com.vaadin.ui.Component;
 import com.vaadin.ui.CssLayout;
-import com.vaadin.ui.HorizontalLayout;
-import com.vaadin.ui.HorizontalSplitPanel;
 import com.vaadin.ui.Image;
 import com.vaadin.ui.Label;
 import com.vaadin.ui.Panel;
@@ -60,8 +56,6 @@ public class DocumentsView extends VerticalLayout implements ScarchiveView {
 
     private Label searchResultCountLabel;
 
-    private VerticalLayout documentDetail;
-
     private final MetaDataService metaDataService;
 
     public DocumentsView(MetaDataService metaDataService) {
@@ -72,22 +66,19 @@ public class DocumentsView extends VerticalLayout implements ScarchiveView {
     public void init() {
 
         final VerticalLayout content = new VerticalLayout();
-        final HorizontalLayout searchBar = createSearchBar();
+        final CssLayout searchBar = createSearchBar();
         content.setMargin(false);
         searchResult = new VerticalLayout();
-        documentDetail = new VerticalLayout();
-        final HorizontalSplitPanel documentContent = new HorizontalSplitPanel(searchResult, documentDetail);
+        searchResult.setMargin(false);
 
-        content.addComponents(searchBar, documentContent);
+        content.addComponents(searchBar, searchResult);
         this.addComponent(content);
 
         findNewestEntries();
 
         content.addStyleName("sc-content");
         searchBar.addStyleName("sc-searchBar");
-        documentContent.addStyleName("sc-splitPane");
         searchResult.addStyleName("sc-searchResult");
-
     }
 
     @Override
@@ -95,14 +86,12 @@ public class DocumentsView extends VerticalLayout implements ScarchiveView {
         return true;
     }
 
-    private HorizontalLayout createSearchBar() {
-        final HorizontalLayout searchBar = new HorizontalLayout();
+    private CssLayout createSearchBar() {
+        final CssLayout searchBar = new CssLayout();
         final CssLayout searchForm = createSearchForm();
         searchBar.addComponent(searchForm);
         searchBar.addComponent(searchResultCountLabel);
-        searchBar.setComponentAlignment(searchResultCountLabel, Alignment.MIDDLE_RIGHT);
-        searchBar.setExpandRatio(searchForm, 8);
-        searchBar.setExpandRatio(searchResultCountLabel, 2);
+        searchBar.addStyleName("sc-searchBar");
         return searchBar;
     }
 
@@ -111,7 +100,6 @@ public class DocumentsView extends VerticalLayout implements ScarchiveView {
         searchForm.addStyleName(ValoTheme.LAYOUT_COMPONENT_GROUP);
         searchForm.addStyleName("sc-searchForm");
         searchField = new TextField();
-        searchField.setWidth(50f, Unit.PERCENTAGE);
         searchField.setPlaceholder("Suchbegriff");
         final Button searchButton = new Button("Suche");
 
@@ -135,7 +123,6 @@ public class DocumentsView extends VerticalLayout implements ScarchiveView {
         }
         searchResultCountLabel.setValue("...");
         searchResult.removeAllComponents();
-        documentDetail.removeAllComponents();
 
         final Set<Finding> findings = finder.find(searchField.getValue());
         findings.forEach(finding -> {
@@ -143,8 +130,6 @@ public class DocumentsView extends VerticalLayout implements ScarchiveView {
         });
         if (findings.size() == 0) {
             searchResult.addComponent(new Label("Nichts gefunden :("));
-        } else {
-            updateDetailComponent(findings.iterator().next());
         }
 
         updateSearchResultCount(findings.size());
@@ -163,48 +148,6 @@ public class DocumentsView extends VerticalLayout implements ScarchiveView {
             searchResult.addComponent(createResultComponent(finding));
         });
         updateSearchResultCount(findings.size());
-        if (findings.size() > 0) {
-            updateDetailComponent(findings.iterator().next());
-        }
-    }
-
-    private void updateDetailComponent(Finding finding) {
-        documentDetail.removeAllComponents();
-        createDetailComponent(finding);
-    }
-
-    private void createDetailComponent(Finding finding) {
-        final MetaData data = finding.getMetaData();
-
-        final CssLayout buttons = new CssLayout();
-        buttons.addStyleName(ValoTheme.LAYOUT_COMPONENT_GROUP);
-        final Button editButton = new Button("Bearbeiten");
-        editButton.addStyleNames(ValoTheme.BUTTON_FRIENDLY, ValoTheme.BUTTON_SMALL);
-        editButton.setIcon(VaadinIcons.PENCIL);
-        final Button openButton = createOpenButton(data);
-
-        buttons.addComponents(editButton, openButton);
-
-        documentDetail.addComponent(new Label(data.getTitle()));
-        documentDetail.addComponent(buttons);
-
-        addThumbnail(data, documentDetail, 300);
-
-        final Label noteContent = new Label(data.getText());
-        noteContent.setContentMode(ContentMode.HTML);
-        documentDetail.addComponent(noteContent);
-
-        // final BrowserFrame bf = new BrowserFrame();
-        // bf.setSource(new
-        // FileResource(metaDataService.getOriginalFilePath(data).toFile()));
-        // documentDetail.addComponent(bf);
-
-        editButton.addClickListener(event -> {
-            getUI().addWindow(new EditMetaDataWindow(data, metaData -> {
-                // TODO add binding to search result panel left
-            }));
-        });
-
     }
 
     private Component createResultComponent(Finding finding) {
@@ -212,6 +155,7 @@ public class DocumentsView extends VerticalLayout implements ScarchiveView {
         final Panel result = new Panel();
         result.setResponsive(true);
         final VerticalLayout info = new VerticalLayout();
+        addButtons(data, info);
         addThumbnail(data, info, 180);
         final Label tagLabel = new Label();
         info.addComponent(tagLabel);
@@ -220,12 +164,26 @@ public class DocumentsView extends VerticalLayout implements ScarchiveView {
 
         info.setMargin(false);
 
-        result.addClickListener(event -> {
-            updateDetailComponent(finding);
-        });
-
         metaDataToUI(data, finding, result, tagLabel);
         return result;
+    }
+
+    private void addButtons(MetaData data, VerticalLayout info) {
+        final CssLayout buttons = new CssLayout();
+        buttons.addStyleName("sc-documentButtons");
+        buttons.addStyleName(ValoTheme.LAYOUT_COMPONENT_GROUP);
+        final Button editButton = new Button("Bearbeiten");
+        editButton.addStyleNames(ValoTheme.BUTTON_FRIENDLY, ValoTheme.BUTTON_SMALL);
+        editButton.setIcon(VaadinIcons.PENCIL);
+        final Button openButton = createOpenButton(data);
+
+        buttons.addComponents(editButton, openButton);
+        editButton.addClickListener(event -> {
+            getUI().addWindow(new EditMetaDataWindow(data, metaData -> {
+                // TODO add binding to search result panel left
+            }));
+        });
+        info.addComponent(buttons);
     }
 
     private void addThumbnail(final MetaData data, final VerticalLayout info, int width) {

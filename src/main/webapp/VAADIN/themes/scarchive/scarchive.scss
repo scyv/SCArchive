@@ -17,4 +17,24 @@
     .sc-searchBar {
         width: 100%;
     }
+
+    .sc-searchForm {
+        width: 100%;
+        .v-textfield {
+            width: 90%;
+        }
+    }
+
+    .sc-documentButtons {
+        margin: 1rem;
+    }
+
+    .sc-searchResultCount {
+        width: 100%;
+        text-align: center;
+    }
+
+    .v-panel-caption {
+        overflow: hidden;
+    }
 }
