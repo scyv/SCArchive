@@ -155,9 +155,15 @@ public class DocumentsView extends VerticalLayout implements ScarchiveView {
         final Panel result = new Panel();
         result.setResponsive(true);
         final VerticalLayout info = new VerticalLayout();
-        addButtons(data, info);
-        addThumbnail(data, info, 180);
         final Label tagLabel = new Label();
+
+        final Label filePathLabel = new Label();
+        filePathLabel.addStyleName(ValoTheme.LABEL_SMALL);
+        filePathLabel.setValue(metaDataService.getOriginalFilePath(finding.getMetaData()).toString());
+
+        addButtons(data, info, finding, result, tagLabel);
+        info.addComponent(filePathLabel);
+        addThumbnail(data, info, 180);
         info.addComponent(tagLabel);
 
         result.setContent(info);
@@ -168,7 +174,7 @@ public class DocumentsView extends VerticalLayout implements ScarchiveView {
         return result;
     }
 
-    private void addButtons(MetaData data, VerticalLayout info) {
+    private void addButtons(MetaData data, VerticalLayout info, Finding finding, Panel result, Label tagLabel) {
         final CssLayout buttons = new CssLayout();
         buttons.addStyleName("sc-documentButtons");
         buttons.addStyleName(ValoTheme.LAYOUT_COMPONENT_GROUP);
@@ -180,7 +186,7 @@ public class DocumentsView extends VerticalLayout implements ScarchiveView {
         buttons.addComponents(editButton, openButton);
         editButton.addClickListener(event -> {
             getUI().addWindow(new EditMetaDataWindow(data, metaData -> {
-                // TODO add binding to search result panel left
+                metaDataToUI(metaData, finding, result, tagLabel);
             }));
         });
         info.addComponent(buttons);
